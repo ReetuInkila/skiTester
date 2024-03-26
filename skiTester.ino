@@ -43,41 +43,47 @@ void lue() {
 }
 
 void loop() {
-  unsigned long loopStartTime = millis(); // Record the start time of the loop
-  
   WiFiClient client = server.available();   // Listen for incoming clients
-  if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
+  if (client) {
+    float t1 = (time2 - time1);
+    float t2 = (time3 - time2);
+    float ratio = t2 / t1;
+
+    Serial.println("New Client.");
     client.println("HTTP/1.1 200 OK");
     client.println("Content-type:text/html");
     client.println("Connection: close");
     client.println();
-    float t1=time2-time1;
-    float t2=time3-time2;
-    Serial.println(time1);
-    Serial.println(time2);
-    Serial.println(time3);
 
-    client.println("test");
-    client.print("<h1>");      
-    client.print(t2/t1);
-    client.println("</h1>"); 
-    client.println();
+    // CSS styles for the table
+    client.println("<style>");
+    client.println("table { width: 100%; border-collapse: collapse; }");
+    client.println("th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }");
+    client.println("tr:hover {background-color: #f5f5f5;}");
+    client.println("</style>");
+
+    // Start HTML table
+    client.println("<table border=\"1\">");
+    client.println("<tr><th>Time 1 (s)</th><th>Time 2 (s)</th><th>Ratio (t2/t1)</th></tr>");
+
+    // Add data rows
+    client.print("<tr><td>");
+    client.print(t1/1000);
+    client.print("</td><td>");
+    client.print(t2/1000);
+    client.print("</td><td>");
+    client.print(ratio);
+    client.println("</td></tr>");
+
+    // End HTML table
+    client.println("</table>");
 
     // Close the connection
     client.stop();
     Serial.println("Client disconnected.");
     Serial.println("");
   }
-  
-  // Calculate the time elapsed in the loop
-  unsigned long loopTime = millis() - loopStartTime;
 
-  // Delay to achieve desired loop rate
-  if (loopTime < 100) { // If loop time is less than 100 milliseconds
-    delay(100 - loopTime); // Delay to maintain 10 loops per second
-  }
-
-  // Call your other function here
+  // Read hall sensor
   lue();
 }
