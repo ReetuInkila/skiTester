@@ -1,20 +1,18 @@
 #include <WiFi.h>
+#include <ESPAsyncWebServer.h>
 
-// Replace with your network credentials
 const char* ssid     = "Ski-Tester-1";
 const char* password = "123456789";
+
+int sensor = 12; //sensor pin
+int val; //numeric variable
 
 unsigned long time1;
 unsigned long time2;
 unsigned long time3;
 
-int sensor = 12; //sensor pin
-int val; //numeric variable
+AsyncWebServer server(80);
 
-// Set web server port number to 80
-WiFiServer server(80);
-
-int baseValue;
 void setup() {
   pinMode(sensor, INPUT); //set sensor pin as input
   Serial.begin(115200);
@@ -28,10 +26,40 @@ void setup() {
   Serial.print("AP IP address: ");
   Serial.println(IP);
   
+
+  // Define a route to serve the HTML page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+    float t1 = (time2 - time1);
+    float t2 = (time3 - time2);
+    float ratio = t2 / t1;
+
+    Serial.println("ESP32 Web Server: New request received:");  // for debugging
+    Serial.println("GET /");        // for debugging
+    String site ="\
+    <html>\
+    <head>\
+    <style>\
+    table { width: 100%;}th, td { padding: 8px; text-align: left; border: 2px solid #ddd; }th, td { padding: 8px; text-align: left; border: 2px solid #ddd; }\
+    </style>\
+    </head>\
+    <body>\
+    <form action=\"/\" method=\"get\"><input type=\"submit\" value=\"Refresh\" /></form>\
+    <table>\
+    <tr><th>Time 1</th><th>Time 2</th><th>Ratio (t2/t1)</th><th>Ski Number</th></tr>\
+    <tr><td>"+String(t1/1000, 3)+"</td><td>"+String(t2/1000, 3)+"</td><td>"+String(ratio, 3)+"</td><form action=\"/\" method=\"post\"><td><input type=\"text\" name=\"ski_number\"><button type=\"submit\">Send</button></td></form></tr>\
+    </table>\
+    </body>\
+    </html>";
+
+
+    request->send(200, "text/html", site);
+  });
+
+  // Start the server
   server.begin();
 }
 
-void lue() {
+void loop() {
   val = digitalRead(sensor); //Read the sensor
   if (val==0) {
     Serial.println("Magnet detected!");
@@ -40,50 +68,4 @@ void lue() {
     time3 = millis();
     delay(1000);
   }
-}
-
-void loop() {
-  WiFiClient client = server.available();   // Listen for incoming clients
-  if (client) {
-    float t1 = (time2 - time1);
-    float t2 = (time3 - time2);
-    float ratio = t2 / t1;
-
-    Serial.println("New Client.");
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-type:text/html");
-    client.println("Connection: close");
-    client.println();
-
-    // CSS styles for the table
-    client.println("<style>");
-    client.println("table { width: 100%; border-collapse: collapse; }");
-    client.println("th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }");
-    client.println("tr:hover {background-color: #f5f5f5;}");
-    client.println("</style>");
-
-    // Start HTML table
-    client.println("<table border=\"1\">");
-    client.println("<tr><th>Time 1 (s)</th><th>Time 2 (s)</th><th>Ratio (t2/t1)</th></tr>");
-
-    // Add data rows
-    client.print("<tr><td>");
-    client.print(t1/1000);
-    client.print("</td><td>");
-    client.print(t2/1000);
-    client.print("</td><td>");
-    client.print(ratio);
-    client.println("</td></tr>");
-
-    // End HTML table
-    client.println("</table>");
-
-    // Close the connection
-    client.stop();
-    Serial.println("Client disconnected.");
-    Serial.println("");
-  }
-
-  // Read hall sensor
-  lue();
 }
