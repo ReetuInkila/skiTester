@@ -19,6 +19,7 @@ int pairs = 1;
 int rounds = 1;
 int runIndex = 0;
 TestRun results[] = {TestRun(1,1)};
+String error = "";
 
 AsyncWebServer server(80);
 
@@ -43,11 +44,12 @@ void setup() {
         <html>\
         <head>\
         <style>\
-        table { width: 100%;}th, td { padding: 8px; text-align: left; border: 2px solid #ddd; }th, td { padding: 8px; text-align: left; border: 2px solid #ddd; }\
+        .error {color:red;}table { width: 100%;}th, td { padding: 8px; text-align: left; border: 2px solid #ddd; }th, td { padding: 8px; text-align: left; border: 2px solid #ddd; }\
         </style>\
         </head>\
         <body>\
         <form action=\"/\" method=\"get\"><input type=\"submit\" value=\"Refresh\" /></form>\
+        <h3 class=\"error\">"+error+"</h3>\
         <table>\
         <tr><th>Time 1</th><th>Time 2</th><th>Ratio (t2/t1)</th><th>Ski Number</th></tr>\
         <tr><td>"+String(results[runIndex].getT1()/1000, 3)+"</td><td>"+String(results[runIndex].getT2()/1000, 3)+"</td><td>"+String((results[runIndex].getT2()/results[runIndex].getT1()), 3)+"</td><form action=\"/\" method=\"post\"><td><input type=\"text\" name=\"ski_number\"><button type=\"submit\">Send</button></td></form></tr>\
@@ -102,28 +104,32 @@ void setup() {
 void loop() {
   val = digitalRead(sensor); //Read the sensor
   if (val==0) {
-    Serial.println("Run started!");
     time1 = millis();
+    Serial.println("Time1");
+    error="Not all sensors read";
     delay(1000);
     while (millis() - time1 < 60000) { // Allow up to 60 seconds for each run
         val = digitalRead(sensor); //Read the sensor
         if (val==0) {
             if(time2==0){
                 time2=millis();
+                Serial.println("Time2");
+                delay(1000);
             }else{
                 time3=millis();
+                Serial.println("Time3");
                 float t1 = (time2 - time1);
                 float t2 = (time3 - time2);
                 results[runIndex].addTimes(t1, t2);
                 time1 = 0; 
                 time2 = 0;
                 time3 = 0;
+                error="";
+                delay(1000);
                 break;
             }
-            delay(1000);
         }
     }
     Serial.println("Run ended!");
-    delay(1000);
   }
 }
