@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
+#include "TestRun.h"
 
 const char* ssid     = "Ski-Tester-1";
 const char* password = "123456789";
@@ -7,12 +8,17 @@ const char* password = "123456789";
 int sensor = 12; //sensor pin
 int val; //numeric variable
 
-unsigned long time1;
-unsigned long time2;
-unsigned long time3;
+unsigned long time1 = 0;
+unsigned long time2 = 0;
+unsigned long time3 = 0;
 
 const char* PARAM_INPUT_1 = "pairs";
 const char* PARAM_INPUT_2 = "rounds";
+
+int pairs = 1;
+int rounds = 1;
+int runIndex = 0;
+TestRun results[] = {TestRun(1,1)};
 
 AsyncWebServer server(80);
 
@@ -32,11 +38,6 @@ void setup() {
 
   // Define a route to serve the HTML page
     server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-        float t1 = (time2 - time1);
-        float t2 = (time3 - time2);
-        float ratio = t2 / t1;
-
-        Serial.println("ESP32 Web Server: New request received:");  // for debugging
         Serial.println("GET /");        // for debugging
         String site ="\
         <html>\
@@ -49,7 +50,7 @@ void setup() {
         <form action=\"/\" method=\"get\"><input type=\"submit\" value=\"Refresh\" /></form>\
         <table>\
         <tr><th>Time 1</th><th>Time 2</th><th>Ratio (t2/t1)</th><th>Ski Number</th></tr>\
-        <tr><td>"+String(t1/1000, 3)+"</td><td>"+String(t2/1000, 3)+"</td><td>"+String(ratio, 3)+"</td><form action=\"/\" method=\"post\"><td><input type=\"text\" name=\"ski_number\"><button type=\"submit\">Send</button></td></form></tr>\
+        <tr><td>"+String(results[runIndex].getT1()/1000, 3)+"</td><td>"+String(results[runIndex].getT2()/1000, 3)+"</td><td>"+String((results[runIndex].getT2()/results[runIndex].getT1()), 3)+"</td><form action=\"/\" method=\"post\"><td><input type=\"text\" name=\"ski_number\"><button type=\"submit\">Send</button></td></form></tr>\
         </table>\
         </body>\
         </html>";
@@ -59,7 +60,6 @@ void setup() {
 
 
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest* request) {
-        Serial.println("ESP32 Web Server: New request received:");  // for debugging
         Serial.println("GET /settings");        // for debugging
         const char settings_html[] PROGMEM = R"rawliteral(
         <!DOCTYPE HTML><html><head>
@@ -80,7 +80,6 @@ void setup() {
     });
 
     server.on("/save", HTTP_GET, [](AsyncWebServerRequest* request) {
-    Serial.println("ESP32 Web Server: New request received:");
     Serial.println("POST /save");
 
     // Read the form data
@@ -103,10 +102,28 @@ void setup() {
 void loop() {
   val = digitalRead(sensor); //Read the sensor
   if (val==0) {
-    Serial.println("Magnet detected!");
-    time1 = time2;
-    time2 = time3;
-    time3 = millis();
+    Serial.println("Run started!");
+    time1 = millis();
+    delay(1000);
+    while (millis() - time1 < 60000) { // Allow up to 60 seconds for each run
+        val = digitalRead(sensor); //Read the sensor
+        if (val==0) {
+            if(time2==0){
+                time2=millis();
+            }else{
+                time3=millis();
+                float t1 = (time2 - time1);
+                float t2 = (time3 - time2);
+                results[runIndex].addTimes(t1, t2);
+                time1 = 0; 
+                time2 = 0;
+                time3 = 0;
+                break;
+            }
+            delay(1000);
+        }
+    }
+    Serial.println("Run ended!");
     delay(1000);
   }
 }
