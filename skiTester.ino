@@ -18,7 +18,7 @@ const char* PARAM_INPUT_2 = "rounds";
 int pairs = 1;
 int rounds = 1;
 int runIndex = 0;
-TestRun results[] = {TestRun(1,1)};
+TestRun * results = new TestRun[1];
 String error = "";
 
 AsyncWebServer server(80);
@@ -49,11 +49,13 @@ void setup() {
         </head>\
         <body>\
         <form action=\"/\" method=\"get\"><input type=\"submit\" value=\"Refresh\" /></form>\
+        <h3>Next ski:"+String(results[runIndex].getSki())+"run:"+String(results[runIndex].getRun())+"</h3>\
         <h3 class=\"error\">"+error+"</h3>\
         <table>\
-        <tr><th>Time 1</th><th>Time 2</th><th>Ratio (t2/t1)</th><th>Ski Number</th></tr>\
-        <tr><td>"+String(results[runIndex].getT1()/1000, 3)+"</td><td>"+String(results[runIndex].getT2()/1000, 3)+"</td><td>"+String((results[runIndex].getT2()/results[runIndex].getT1()), 3)+"</td><form action=\"/\" method=\"post\"><td><input type=\"text\" name=\"ski_number\"><button type=\"submit\">Send</button></td></form></tr>\
+        <tr><th>Time 1</th><th>Time 2</th><th>Total Time</th><th>Ratio (t2/t1)</th><th>Ski Number</th><th>Run</th></tr>\
+        <tr><td>"+String(results[runIndex-1].getT1()/1000, 3)+"</td><td>"+String(results[runIndex-1].getT2()/1000, 3)+"</td><td>"+String(results[runIndex-1].getT1()/1000+results[runIndex-1].getT2()/1000, 3)+"</td><td>"+String((results[runIndex-1].getT2()/results[runIndex-1].getT1()), 3)+"</td><td>"+String(results[runIndex-1].getSki())+"</td><td>"+String(results[runIndex-1].getRun())+"</td></tr>\
         </table>\
+        <form action=\"/settings\" method=\"get\"><input type=\"submit\" value=\"Settings\" /></form>\
         </body>\
         </html>";
 
@@ -72,8 +74,8 @@ void setup() {
           </style>
           </head><body>
           <form action="/save">
-          <label>Number of pairs<input type="text" name="pairs"></label><br>
-          <label>Rounds<input type="text" name="rounds"></label><br>
+          <label>Number of pairs<input type="number" min="1" max="20" name="pairs"></label><br>
+          <label>Rounds<input type="number" min="1" max="10" name="rounds"></label><br>
           <input type="submit" value="Save">
           </form>
         </body></html>)rawliteral";
@@ -86,11 +88,27 @@ void setup() {
 
     // Read the form data
     if (request->hasParam(PARAM_INPUT_1) && request->hasParam(PARAM_INPUT_2)) {
-      int pairs = request->getParam(PARAM_INPUT_1)->value().toInt();
-      int rounds = request->getParam(PARAM_INPUT_2)->value().toInt();
+      pairs = request->getParam(PARAM_INPUT_1)->value().toInt();
+      rounds = request->getParam(PARAM_INPUT_2)->value().toInt();
       if(pairs==0 || rounds==0){
         request->redirect("/settings");
       }
+      runIndex = 0;
+      TestRun* newResults = new TestRun[pairs * rounds];
+
+      for (int i = 1; i <= rounds; ++i) {
+        if (!isEven(i)) {
+          for (int j = 1; j <= pairs; ++j) {
+            newResults[(i - 1) * pairs + (j - 1)].addRun(j, i);
+          }
+        } else {
+          for (int j = pairs; j >= 1; --j) {
+            newResults[(i - 1) * pairs + (j - 1)].addRun(3 - (j - 1), i);
+          }
+        }
+      }
+      delete[] results; 
+      results = newResults;
       request->redirect("/");
     } else {
       request->redirect("/settings");
@@ -120,7 +138,14 @@ void loop() {
                 Serial.println("Time3");
                 float t1 = (time2 - time1);
                 float t2 = (time3 - time2);
-                results[runIndex].addTimes(t1, t2);
+                Serial.print(runIndex);
+                Serial.print(" ");
+                Serial.println(pairs*rounds);
+                if(runIndex<pairs*rounds){
+                  results[runIndex].addTimes(t1, t2);
+                  runIndex++;
+                }
+                
                 time1 = 0; 
                 time2 = 0;
                 time3 = 0;
@@ -133,3 +158,7 @@ void loop() {
     Serial.println("Run ended!");
   }
 }
+
+// Returns true if n is 
+// even, else odd 
+bool isEven(int n) { return (n % 2 == 0); } 

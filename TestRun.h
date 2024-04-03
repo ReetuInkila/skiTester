@@ -1,6 +1,11 @@
 class TestRun {
 public:
-    TestRun(int skiNumber, int runNumber) : ski(skiNumber), run(runNumber) {}
+    TestRun() : ski(1), run(1){}
+
+    void addRun(int skiNumber, int runNumber) {
+        this->ski = skiNumber;
+        this->run = runNumber;
+    }
 
     void addTimes(float t1, float t2) {
         this->t1 = t1;
@@ -26,6 +31,6 @@ public:
 private:
     int ski;
     int run;
-    unsigned long t1;
-    unsigned long t2;
+    float t1;
+    float t2;
 };
