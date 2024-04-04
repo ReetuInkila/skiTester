@@ -49,13 +49,19 @@ void setup() {
         </head>\
         <body>\
         <form action=\"/\" method=\"get\"><input type=\"submit\" value=\"Refresh\" /></form>\
-        <h3>Next ski:"+String(results[runIndex].getSki())+"run:"+String(results[runIndex].getRun())+"</h3>\
-        <h3 class=\"error\">"+error+"</h3>\
-        <table>\
-        <tr><th>Time 1</th><th>Time 2</th><th>Total Time</th><th>Ratio (t2/t1)</th><th>Ski Number</th><th>Run</th></tr>\
-        <tr><td>"+String(results[runIndex-1].getT1()/1000, 3)+"</td><td>"+String(results[runIndex-1].getT2()/1000, 3)+"</td><td>"+String(results[runIndex-1].getT1()/1000+results[runIndex-1].getT2()/1000, 3)+"</td><td>"+String((results[runIndex-1].getT2()/results[runIndex-1].getT1()), 3)+"</td><td>"+String(results[runIndex-1].getSki())+"</td><td>"+String(results[runIndex-1].getRun())+"</td></tr>\
-        </table>\
-        <form action=\"/settings\" method=\"get\"><input type=\"submit\" value=\"Settings\" /></form>\
+        <h3 class=\"error\">"+error+"</h3>";
+        
+        if(runIndex<pairs*rounds){
+          site= site+"<h3>Next ski:"+String(results[runIndex].getSki())+"run:"+String(results[runIndex].getRun())+"</h3>";
+        }
+        if(runIndex>0){
+          site= site+"<table>\
+            <tr><th>Time 1</th><th>Time 2</th><th>Total Time</th><th>Ratio (t2/t1)</th><th>Ski Number</th><th>Run</th></tr>\
+            <tr><td>"+String(results[runIndex-1].getT1()/1000, 3)+"</td><td>"+String(results[runIndex-1].getT2()/1000, 3)+"</td><td>"+String(results[runIndex-1].getT1()/1000+results[runIndex-1].getT2()/1000, 3)+"</td><td>"+String((results[runIndex-1].getT2()/results[runIndex-1].getT1()), 3)+"</td><td>"+String(results[runIndex-1].getSki())+"</td><td>"+String(results[runIndex-1].getRun())+"</td></tr>\
+            </table>";
+        }
+
+        site= site+"<form action=\"/settings\" method=\"get\"><input type=\"submit\" value=\"Settings\" /></form>\
         </body>\
         </html>";
 
