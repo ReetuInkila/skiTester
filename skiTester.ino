@@ -18,6 +18,7 @@ const char* PARAM_INPUT_2 = "rounds";
 int pairs = 1;
 int rounds = 1;
 int runIndex = 0;
+int * order = new int[1];
 TestRun * results = new TestRun[1];
 String error = "";
 
@@ -50,7 +51,7 @@ void setup() {
         <body>\
         <form action=\"/\" method=\"get\"><input type=\"submit\" value=\"Refresh\" /></form>\
         <h3 class=\"error\">"+error+"</h3>";
-        
+
         if(runIndex<pairs*rounds){
           site= site+"<h3>Next ski:"+String(results[runIndex].getSki())+"run:"+String(results[runIndex].getRun())+"</h3>";
         }
@@ -94,27 +95,44 @@ void setup() {
 
     // Read the form data
     if (request->hasParam(PARAM_INPUT_1) && request->hasParam(PARAM_INPUT_2)) {
+      for (int i = 0; i < pairs * rounds; i++) {
+        Serial.print(order[i]);
+      }
       pairs = request->getParam(PARAM_INPUT_1)->value().toInt();
       rounds = request->getParam(PARAM_INPUT_2)->value().toInt();
       if(pairs==0 || rounds==0){
         request->redirect("/settings");
       }
+      Serial.println("");
       runIndex = 0;
       TestRun* newResults = new TestRun[pairs * rounds];
-
+      int * newOrder = new int[pairs * rounds];
+      int t=0;
       for (int i = 1; i <= rounds; ++i) {
         if (!isEven(i)) {
           for (int j = 1; j <= pairs; ++j) {
-            newResults[(i - 1) * pairs + (j - 1)].addRun(j, i);
+            Serial.print(j);
+            newOrder[t]=j;
+            newResults[t].addRun(j, i);
+            t++;
           }
         } else {
           for (int j = pairs; j >= 1; --j) {
-            newResults[(i - 1) * pairs + (j - 1)].addRun(3 - (j - 1), i);
+            Serial.print(j);
+            newOrder[t]=j;
+            newResults[t].addRun(j, i);
+            t++;
           }
         }
       }
+      Serial.println("");
       delete[] results; 
       results = newResults;
+      delete[] order;
+      order = newOrder;
+      for (int i = 0; i < pairs * rounds; i++) {
+        Serial.print(results[i].getSki());
+      }
       request->redirect("/");
     } else {
       request->redirect("/settings");
