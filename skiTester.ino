@@ -63,11 +63,17 @@ void setup() {
         if(runIndex<pairs*rounds){
           site= site+"<h3>Next ski: "+String(order[runIndex])+" run: "+String(results[order[runIndex]].getNextRun())+"</h3>";
         }
-        if(runIndex>0){
+        if(runIndex>0 && runIndex<pairs*rounds){
           site= site+"<table>\
             <tr><th>Time 1</th><th>Time 2</th><th>Total Time</th><th>Ratio (t2/t1)</th><th>Ski Number</th><th>Run</th></tr>\
             <tr><td>"+String(results[order[runIndex-1]].getLastT1()/1000, 3)+"</td><td>"+String(results[order[runIndex-1]].getLastT2()/1000, 3)+"</td><td>"+String(results[order[runIndex-1]].getLastT1()/1000+results[order[runIndex-1]].getLastT2()/1000, 3)+"</td><td>"+String((results[order[runIndex-1]].getLastT2()/results[order[runIndex-1]].getLastT1()), 3)+"</td><td>"+String(results[order[runIndex-1]].getSki())+"</td><td>"+String(results[order[runIndex-1]].getLastRun())+"</td></tr>\
             </table>";
+        }else if(runIndex>0){
+          site= site+"<table><tr><th>Time 1</th><th>Time 2</th><th>Total Time</th><th>Ratio (t2/t1)</th><th>Ski Number</th><th>Run</th></tr>";
+          for(int i=0;i<pairs;i++){
+            site= site+"<tr><td>"+String(results[i].getLastT1()/1000, 3)+"</td><td>"+String(results[i].getLastT2()/1000, 3)+"</td><td>"+String(results[i].getLastT1()/1000+results[i].getLastT2()/1000, 3)+"</td><td>"+String((results[i].getLastT2()/results[i].getLastT1()), 3)+"</td><td>"+String(results[i].getSki())+"</td><td>"+String(results[i].getLastRun())+"</td></tr>";
+          }
+          site= site+"</table>";
         }
 
         site= site+"<form action=\"/settings\" method=\"get\"><input type=\"submit\" value=\"Settings\" /></form>\
