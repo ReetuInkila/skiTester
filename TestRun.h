@@ -1,36 +1,57 @@
 class TestRun {
 public:
-    TestRun() : ski(1), run(1){}
+    TestRun() : ski(1), rounds(0), t1(nullptr), t2(nullptr) {}
 
-    void addRun(int skiNumber, int runNumber) {
+    void addRun(int skiNumber, int rounds) {
         this->ski = skiNumber;
-        this->run = runNumber;
+        if (t1 != nullptr) {
+            delete[] t1;
+        }
+        if (t2 != nullptr) {
+            delete[] t2;
+        }
+        this->t1 = new float[rounds];
+        this->t2 = new float[rounds];
     }
 
     void addTimes(float t1, float t2) {
-        this->t1 = t1;
-        this->t2 = t2;
+        this->t1[rounds] = t1;
+        this->t2[rounds] = t2;
+        rounds++;
+        
     }
 
     int getSki() const {
         return ski;
     }
 
-    int getRun() const {
-        return run;
+    int getLastRun() const {
+        return rounds-1;
     }
 
-    float getT1() const {
-        return t1;
+    int getNextRun() const {
+        return rounds;
     }
 
-    float getT2() const {
-        return t2;
+    float getLastT1() const {
+        if (rounds > 0) {
+            return t1[rounds - 1];
+        } else {
+            return 0.0f;
+        }
     }
 
+    float getLastT2() const {
+        if (rounds > 0) {
+            return t2[rounds - 1];
+        } else {
+            return 0.0f;
+        }
+    }
 private:
     int ski;
-    int run;
-    float t1;
-    float t2;
+    int rounds;
+    float *t1;
+    float *t2;
 };
+
