@@ -26,11 +26,11 @@ public:
     }
 
     int getLastRun() const {
-        return rounds-1;
+        return rounds;
     }
 
     int getNextRun() const {
-        return rounds;
+        return rounds+1;
     }
 
     float getLastT1() const {
@@ -48,10 +48,32 @@ public:
             return 0.0f;
         }
     }
+
+    float avgT1(){
+        return avg(t1, rounds);
+    }
+
+    float avgT2(){
+        return avg(t2, rounds);
+    }
+
 private:
     int ski;
     int rounds;
     float *t1;
     float *t2;
+
+    float avg(float* arr, int size) {
+        float sum = 0.0f;
+        for (int i = 0; i < size; ++i) {
+            sum += arr[i];
+        }
+        if (size > 0) {
+            return sum / size;
+        } else {
+            return 0.0f; // return 0 if array is empty to avoid division by zero
+        }
+    }
+
 };
 

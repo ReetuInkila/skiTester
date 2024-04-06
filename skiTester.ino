@@ -61,7 +61,7 @@ void setup() {
 
 
         if(runIndex<pairs*rounds){
-          site= site+"<h3>Next ski: "+String(order[runIndex])+" run: "+String(results[order[runIndex]].getNextRun())+"</h3>";
+          site= site+"<h3>Next ski: "+String(results[order[runIndex]].getSki())+" run: "+String(results[order[runIndex]].getNextRun())+"</h3>";
         }
         if(runIndex>0 && runIndex<pairs*rounds){
           site= site+"<table>\
@@ -69,9 +69,9 @@ void setup() {
             <tr><td>"+String(results[order[runIndex-1]].getLastT1()/1000, 3)+"</td><td>"+String(results[order[runIndex-1]].getLastT2()/1000, 3)+"</td><td>"+String(results[order[runIndex-1]].getLastT1()/1000+results[order[runIndex-1]].getLastT2()/1000, 3)+"</td><td>"+String((results[order[runIndex-1]].getLastT2()/results[order[runIndex-1]].getLastT1()), 3)+"</td><td>"+String(results[order[runIndex-1]].getSki())+"</td><td>"+String(results[order[runIndex-1]].getLastRun())+"</td></tr>\
             </table>";
         }else if(runIndex>0){
-          site= site+"<table><tr><th>Time 1</th><th>Time 2</th><th>Total Time</th><th>Ratio (t2/t1)</th><th>Ski Number</th><th>Run</th></tr>";
+          site= site+"<table><tr><th>Ski Number</th><th>Time 1</th><th>Time 2</th><th>Total Time</th><th>Ratio (t2/t1)</th></tr>";
           for(int i=0;i<pairs;i++){
-            site= site+"<tr><td>"+String(results[i].getLastT1()/1000, 3)+"</td><td>"+String(results[i].getLastT2()/1000, 3)+"</td><td>"+String(results[i].getLastT1()/1000+results[i].getLastT2()/1000, 3)+"</td><td>"+String((results[i].getLastT2()/results[i].getLastT1()), 3)+"</td><td>"+String(results[i].getSki())+"</td><td>"+String(results[i].getLastRun())+"</td></tr>";
+            site= site+"<tr><td>"+String(results[i].getSki())+"</td><td>"+String(results[i].avgT1()/1000, 3)+"</td><td>"+String(results[i].avgT2()/1000, 3)+"</td><td>"+String(results[i].avgT1()/1000+results[i].avgT2()/1000, 3)+"</td><td>"+String((results[i].avgT2()/results[i].avgT1()), 3)+"</td></tr>";
           }
           site= site+"</table>";
         }
@@ -118,7 +118,7 @@ void setup() {
       runIndex = 0;
       TestRun* newResults = new TestRun[pairs];
       for (int i = 0; i < pairs; ++i) {
-        newResults[i].addRun(i, rounds);
+        newResults[i].addRun(i+1, rounds);
       }
 
       int * newOrder = new int[pairs * rounds];
