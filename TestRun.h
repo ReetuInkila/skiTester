@@ -49,12 +49,12 @@ public:
         }
     }
 
-    float avgT1(){
+    float avgT1() const {
         return avg(t1, rounds);
     }
 
-    float avgT2(){
-        return avg(t2, rounds);
+    float avgT2() const {
+      return avg(t2, rounds);
     }
 
 private:
@@ -63,7 +63,7 @@ private:
     float *t1;
     float *t2;
 
-    float avg(float* arr, int size) {
+    float avg(float* arr, int size) const{
         float sum = 0.0f;
         for (int i = 0; i < size; ++i) {
             sum += arr[i];
