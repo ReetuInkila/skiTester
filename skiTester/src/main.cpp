@@ -42,7 +42,7 @@ void setup()
   results[0].addRun(1, rounds);
   pinMode(sensor, INPUT); // set sensor pin as input
   pinMode(buzzerPin, OUTPUT);
-  tone(buzzerPin, 1000, 2000);
+  tone(buzzerPin, 800, 2000);
   Serial.begin(115200);
 
   // Connect to Wi-Fi network with SSID and password
@@ -268,7 +268,7 @@ void loop()
 
 void buzz()
 {
-  tone(buzzerPin, 1000, 500);
+  tone(buzzerPin, 800, 500);
   noTone(buzzerPin);
   delay(500);
 }
