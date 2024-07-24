@@ -31,7 +31,6 @@ AsyncWebServer server(80);
 
 // put function declarations here:
 int myFunction(int, int);
-
 void buzz();
 bool isEven(int);
 int sort(const void*, const void*);
