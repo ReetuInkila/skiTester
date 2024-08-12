@@ -166,54 +166,44 @@ void setup()
 
         request->send(200, "text/html", settings_html); });
 
-  server.on("/save", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-      Serial.println("POST /save");
+  server.on("/settings", HTTP_POST, [](AsyncWebServerRequest *request){
+      Serial.println("POST /settings");
 
-    // Read the form data
-    if (request->hasParam(PARAM_INPUT_1) && request->hasParam(PARAM_INPUT_2)) {
-      pairs = request->getParam(PARAM_INPUT_1)->value().toInt();
-      rounds = request->getParam(PARAM_INPUT_2)->value().toInt();
-      if(pairs==0 || rounds==0){
-        request->redirect("/settings");
-      }
+      // Read the form data
+      if (request->hasParam(PARAM_INPUT_1) && request->hasParam(PARAM_INPUT_2)) {
+        pairs = request->getParam(PARAM_INPUT_1)->value().toInt();
+        rounds = request->getParam(PARAM_INPUT_2)->value().toInt();
+        if(pairs==0 || rounds==0){
+          request->redirect("/settings");
+        }
 
-      runIndex = 0;
-      TestRun* newResults = new TestRun[pairs];
-      for (int i = 0; i < pairs; ++i) {
-        newResults[i].addRun(i+1, rounds);
-      }
+        runIndex = 0;
+        TestRun* newResults = new TestRun[pairs];
+        for (int i = 0; i < pairs; ++i) {
+          newResults[i].addRun(i+1, rounds);
+        }
 
-      int * newOrder = new int[pairs * rounds];
-      int t=0;
-      for (int i = 1; i <= rounds; ++i) {
-        if (!isEven(i)) {
-          for (int j = 0; j < pairs; ++j) {
-            newOrder[t]=j;
-            t++;
-          }
-        } else {
-          for (int j = pairs-1; j >= 0; --j) {
-            newOrder[t]=j;
-            t++;
+        int * newOrder = new int[pairs * rounds];
+        int t=0;
+        for (int i = 1; i <= rounds; ++i) {
+          if (!isEven(i)) {
+            for (int j = 0; j < pairs; ++j) {
+              newOrder[t]=j;
+              t++;
+            }
+          } else {
+            for (int j = pairs-1; j >= 0; --j) {
+              newOrder[t]=j;
+              t++;
+            }
           }
         }
+        delete[] results; 
+        results = newResults;
+        delete[] order;
+        order = newOrder;
       }
-      delete[] results; 
-      results = newResults;
-      delete[] order;
-      order = newOrder;
-
-      Serial.println(runIndex);
-      for(int i=0;i<pairs*rounds;i++){
-        Serial.print(order[i]);
-      }
-      Serial.println("");
-      
-      request->redirect("/");
-    } else {
-      request->redirect("/settings");
-    } });
+  });
 
   // Start the server
   server.begin();
