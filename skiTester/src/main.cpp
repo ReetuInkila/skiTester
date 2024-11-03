@@ -15,91 +15,78 @@ unsigned long time1 = 0;
 unsigned long time2 = 0;
 unsigned long time3 = 0;
 
-float t1, t2;
-
-
+float t1 = 0, t2 = 0;
 
 String error = ""; // Variable to store error message
 
 AsyncWebServer server(80);
 
-// Create an Event Source on /events
-AsyncEventSource events("/events");
+// Create a WebSocket object
+AsyncWebSocket ws("/ws");
 
-// put function declarations here:
+// Function declarations
 void buzz();
-bool isEven(int);
-int sort(const void*, const void*);
+void readSensors();
+void notifyClients();
 
-void setup(){
-
+void setup() {
   pinMode(sensor, INPUT); // set sensor pin as input
   pinMode(buzzerPin, OUTPUT);
   tone(buzzerPin, 800, 2000);
   Serial.begin(115200);
 
   // Connect to Wi-Fi network with SSID and password
-  Serial.print("Setting AP (Access Point)…");
-  // Remove the password parameter, if you want the AP (Access Point) to be open
+  Serial.print("Setting AP (Access Point)...");
   WiFi.softAP(ssid);
 
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(IP);
-
-
-  server.on("/ski", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("GET /ski");
-
-    // Create a JSON document with a sufficient capacity
-    DynamicJsonDocument jsonDoc(1024);
-
-    // Add pairs and rounds to the JSON document
-    jsonDoc["t1"] = t1;
-    jsonDoc["t2"] = t2;
-
-     // Serialize the JSON document to a string
-    String jsonResponse;
-    serializeJson(jsonDoc, jsonResponse);
-
-    // Set CORS headers
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", jsonResponse);
-    response->addHeader("Access-Control-Allow-Origin", "*");
-    response->addHeader("Access-Control-Allow-Methods", "GET");
-    response->addHeader("Access-Control-Allow-Headers", "Content-Type");
-    request->send(response);
+  
+  // Attach WebSocket to the server
+  ws.onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+    if (type == WS_EVT_CONNECT) {
+      Serial.println("WebSocket client connected");
+    } else if (type == WS_EVT_DISCONNECT) {
+      Serial.println("WebSocket client disconnected");
+    }
   });
+
+  server.addHandler(&ws);
 
   // Start the server
   server.begin();
 }
 
-void loop()
-{
+void loop() {
+  readSensors();
+
+  // Notify clients if t1 and t2 are updated
+  if (t1 != 0 && t2 != 0) {
+    notifyClients();
+  }
+}
+
+// Function to read sensors and update t1 and t2
+void readSensors() {
   val = digitalRead(sensor); // Read the sensor
-  if (val == 0)
-  {
+  if (val == 0) {
     time1 = millis();
     Serial.println("Time1");
     error = "Not all sensors read";
     buzz();
-    while (millis() - time1 < 60000)
-    {                            // Allow up to 60 seconds for each run
+    while (millis() - time1 < 60000) { // Allow up to 60 seconds for each run
       val = digitalRead(sensor); // Read the sensor
-      if (val == 0)
-      {
-        if (time2 == 0)
-        {
+      if (val == 0) {
+        if (time2 == 0) {
           time2 = millis();
           Serial.println("Time2");
           buzz();
-        }
-        else
-        {
+        } else {
           time3 = millis();
           Serial.println("Time3");
-          t1 = (time2 - time1)/1000;
-          t2 = (time3 - time2)/1000;
+          t1 = (time2 - time1) / 1000.0;
+          t2 = (time3 - time2) / 1000.0;
 
           time1 = 0;
           time2 = 0;
@@ -114,8 +101,24 @@ void loop()
   }
 }
 
-void buzz()
-{
+// Function to send t1 and t2 to all connected WebSocket clients
+void notifyClients() {
+  DynamicJsonDocument jsonDoc(1024);
+  jsonDoc["t1"] = t1;
+  jsonDoc["t2"] = t2;
+
+  String jsonResponse;
+  serializeJson(jsonDoc, jsonResponse);
+
+  // Broadcast the JSON data to all connected WebSocket clients
+  ws.textAll(jsonResponse);
+
+  // Reset t1 and t2 after notifying clients
+  t1 = 0;
+  t2 = 0;
+}
+
+void buzz() {
   tone(buzzerPin, 800, 500);
   noTone(buzzerPin);
   delay(500);
