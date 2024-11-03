@@ -3,39 +3,32 @@ import { View, Button, Text, StyleSheet } from 'react-native';
 import { DataTable } from 'react-native-paper';
 
 export default function HomeScreen() {
+  const [serverState, setServerState] = React.useState('Loading...');
   const [pairs, setPairs] = useState(null);
   const [rounds, setRounds] = useState(null);
   const [data, setData] = useState({});
-  const [loading, setLoading] = useState(false);
+  var ws = React.useRef(new WebSocket('ws://192.168.4.1/ws')).current;
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://192.168.4.1/ski');
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      const jsonData = await response.json();
-      setData(jsonData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setPairs("Error");
-      setRounds("Error");
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  React.useEffect(() => {
+    ws.onopen = () => {
+      setServerState('Connected to the server')
+    };
+    ws.onclose = (e) => {
+      setServerState('Disconnected. Check internet or server.')
+    };
+    ws.onerror = (e) => {
+      setServerState(e.message);
+    };
+    ws.onmessage = (e) => {
+      const jsonData = JSON.parse(e.data);
+      console.log(e.data);
+      setData(jsonData)
+    };
+  }, [])
 
   return (
     <View>
-      {loading ? (
-        <Text>Loading...</Text>
-      ) : (
         <>
           <DataTable>
             <DataTable.Header>
@@ -46,7 +39,6 @@ export default function HomeScreen() {
               <DataTable.Title>T Tot</DataTable.Title>
             </DataTable.Header>
 
-
             <DataTable.Row>
               <DataTable.Cell>{1}</DataTable.Cell>
               <DataTable.Cell>{1}</DataTable.Cell>
@@ -56,8 +48,6 @@ export default function HomeScreen() {
             </DataTable.Row>
           </DataTable>
         </>
-      )}
-      <Button title="Reload" onPress={fetchData} />
     </View>
   );
 }
