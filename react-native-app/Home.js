@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Button, Text, StyleSheet } from 'react-native';
 import { DataTable } from 'react-native-paper';
 
-export default function HomeScreen() {
+export default function HomeScreen(props) {
   const [serverState, setServerState] = React.useState('Loading...');
-  const [pairs, setPairs] = useState(null);
-  const [rounds, setRounds] = useState(null);
-  const [data, setData] = useState({});
+  const [data, setData] = useState({pairs:props.pairs, rouds:props.rouds, results:[]});
   var ws = React.useRef(new WebSocket('ws://192.168.4.1/ws')).current;
 
 
   React.useEffect(() => {
+    console.log(props.pairs);
     ws.onopen = () => {
       setServerState('Connected to the server')
     };
@@ -22,8 +21,11 @@ export default function HomeScreen() {
     };
     ws.onmessage = (e) => {
       const jsonData = JSON.parse(e.data);
-      console.log(e.data);
-      setData(jsonData)
+      // Use functional update to avoid direct mutation of state
+      setData(prevData => ({
+        ...prevData,
+        results: [...prevData.results, jsonData]
+      }));
     };
   }, [])
 
@@ -39,13 +41,15 @@ export default function HomeScreen() {
               <DataTable.Title>T Tot</DataTable.Title>
             </DataTable.Header>
 
-            <DataTable.Row>
-              <DataTable.Cell>{1}</DataTable.Cell>
-              <DataTable.Cell>{1}</DataTable.Cell>
-              <DataTable.Cell>{data.t1}</DataTable.Cell>
-              <DataTable.Cell>{data.t2}</DataTable.Cell>
-              <DataTable.Cell>{data.t1 + data.t2}</DataTable.Cell>
-            </DataTable.Row>
+            {data.results.map((result, index) => (
+              <DataTable.Row key={index}>
+                <DataTable.Cell>1</DataTable.Cell>
+                <DataTable.Cell>1</DataTable.Cell>
+                <DataTable.Cell>{result.t1}</DataTable.Cell>
+                <DataTable.Cell>{result.t2}</DataTable.Cell>
+                <DataTable.Cell>{result.t1 + result.t2}</DataTable.Cell>
+              </DataTable.Row>
+            ))}
           </DataTable>
         </>
     </View>
