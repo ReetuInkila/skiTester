@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { DataTable } from 'react-native-paper';
 
-export default function HomeScreen(props) {
+export default function HomeScreen({data, setData, pairs, rounds, navigation}) {
   const [serverState, setServerState] = useState('Loading...');
-  const [data, setData] = useState({ pairs: props.pairs, rounds: props.rounds, results: [] });
-  const [order, setOrder] = useState([]);
+  const [order, setOrder] = useState([{pair:0,round:0}]);
   const indexRef = useRef(0);
   const ws = useRef(new WebSocket('ws://192.168.4.1/ws')).current;
 
@@ -31,23 +30,22 @@ export default function HomeScreen(props) {
 
   useEffect(() => {
     const newOrder = [];
-    for (let round = 1; round <= props.rounds; round++) {
+    for (let round = 1; round <= rounds; round++) {
       if (round % 2 !== 0) {
-        for (let pair = 1; pair <= props.pairs; pair++) {
+        for (let pair = 1; pair <= pairs; pair++) {
           newOrder.push({ round, pair });
         }
       } else {
-        for (let pair = props.pairs; pair > 0; pair--) {
+        for (let pair = pairs; pair > 0; pair--) {
           newOrder.push({ round, pair });
         }
       }
     }
     setOrder(newOrder);
-  }, [props.pairs, props.rounds]);
+  }, [pairs, rounds]);
 
   function newResult(jsonData) {
     const currentIndex = indexRef.current;
-    console.log(order);
     if (currentIndex < order.length) {
       try {
         const parsedData = JSON.parse(jsonData);
@@ -62,9 +60,14 @@ export default function HomeScreen(props) {
             },
           ],
         }));
-        indexRef.current += 1;
+        if (currentIndex < order.length - 1) {
+          indexRef.current += 1;
+        }
       } catch (error) {
         console.error('Error parsing WebSocket data:', error);
+      }
+      if (currentIndex === order.length - 1) {
+        navigation.navigate('Results');
       }
     }
   }
@@ -75,14 +78,14 @@ export default function HomeScreen(props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.status}>{serverState}</Text>
+      <Text style={styles.status}>Seuraavaksi pari: {order[indexRef.current].pair}, kierros: {order[indexRef.current].round}</Text>
       <DataTable>
         <DataTable.Header>
-          <DataTable.Title>Pair</DataTable.Title>
-          <DataTable.Title>Round</DataTable.Title>
+          <DataTable.Title>Pari</DataTable.Title>
+          <DataTable.Title>Kierros</DataTable.Title>
           <DataTable.Title>T1</DataTable.Title>
           <DataTable.Title>T2</DataTable.Title>
-          <DataTable.Title>Total</DataTable.Title>
+          <DataTable.Title>Tot</DataTable.Title>
         </DataTable.Header>
       </DataTable>
       <ScrollView style={styles.scrollView}>
