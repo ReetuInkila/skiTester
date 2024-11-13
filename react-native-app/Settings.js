@@ -8,36 +8,13 @@ export default function SettingsScreen({ pairs, setPairs, rounds, setRounds, nav
   const [tempRounds, setTempRounds] = useState(String(rounds));
 
   const handleSave = async () => {
-    try {
-      // Update the main state
-      const newPairs = Number(tempPairs);
-      const newRounds = Number(tempRounds);
+    // Update the main state
+    const newPairs = Number(tempPairs);
+    const newRounds = Number(tempRounds);
 
-      setPairs(newPairs);
-      setRounds(newRounds);
-
-      // Make the HTTP POST request
-      const response = await fetch('http://192.168.4.1/settings', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pairs: newPairs, rounds: newRounds }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      console.log('Response:', data);
-
-      Alert.alert('Success', 'Settings saved successfully!');
-      navigation.goBack(); // Navigate back to the Home screen after saving
-    } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error', 'Failed to save settings.');
-    }
+    setPairs(newPairs);
+    setRounds(newRounds);
+    navigation.navigate('Home'); // Navigate back to Home
   };
 
   return (
