@@ -19,14 +19,14 @@ export default function SettingsScreen({ pairs, setPairs, rounds, setRounds, nav
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Set Pairs:</Text>
+      <Text style={styles.label}>Suksien lukumäärä:</Text>
       <TextInput
         style={styles.input}
         keyboardType="numeric"
         value={tempPairs}
         onChangeText={setTempPairs}
       />
-      <Text style={styles.label}>Set Rounds:</Text>
+      <Text style={styles.label}>Kierrosten lukumäärä:</Text>
       <TextInput
         style={styles.input}
         keyboardType="numeric"

@@ -19,6 +19,21 @@ export default function HomeScreen(props) {
   }, []);
 
   useEffect(() => {
+    // Ensure WebSocket connection remains active but update the message handler
+    ws.onmessage = (e) => {
+      if (order.length > 0) {
+        newResult(e.data);
+      } else {
+        console.warn('Order not populated yet; message ignored.');
+      }
+    };
+  
+    console.log('WebSocket message handler updated based on new order:', order);
+  
+    // Clean up is not necessary here as we're only updating the handler
+  }, [order]);
+
+  useEffect(() => {
     const newOrder = [];
     for (let round = 1; round <= props.rounds; round++) {
       if (round % 2 !== 0) {
@@ -32,11 +47,11 @@ export default function HomeScreen(props) {
       }
     }
     setOrder(newOrder);
-    console.log('Order:', newOrder);
   }, [props.pairs, props.rounds]);
 
   function newResult(jsonData) {
     const currentIndex = indexRef.current;
+    console.log(order);
     if (currentIndex < order.length) {
       try {
         const parsedData = JSON.parse(jsonData);
