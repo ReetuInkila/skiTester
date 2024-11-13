@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { DataTable } from 'react-native-paper';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function ResultScreen({ results }) {
   // Function to calculate average for each ski (pair)
@@ -29,18 +30,66 @@ export default function ResultScreen({ results }) {
     return skiAverages;
   };
 
-  const skiAverages = calculateSkiAverages();
+  const [skiAverages, setSkiAverages] = useState(calculateSkiAverages);
+  const [sortConfig, setSortConfig] = useState({ key: 'pair', direction: 'asc' });
+
+  // Function to sort data
+  const sortData = (key) => {
+    const sortedData = [...skiAverages].sort((a, b) => {
+      if (a[key] < b[key]) {
+        return -1;
+      }
+      if (a[key] > b[key]) {
+        return 1;
+      }
+      return 0;
+    });
+
+    setSkiAverages(sortedData);
+    setSortConfig({ key, direction: 'asc' }); // Always set to ascending order
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Tulokset</Text>
-      <ScrollView>
-        <DataTable>
+      <ScrollView style={styles.scrollView}>
+        <DataTable style={styles.dataTable}>
           <DataTable.Header>
-            <DataTable.Title>Pari</DataTable.Title>
-            <DataTable.Title>Keskiarvo T1</DataTable.Title>
-            <DataTable.Title>Keskiarvo T2</DataTable.Title>
-            <DataTable.Title>Keskiarvo Yhteensä</DataTable.Title>
+            <DataTable.Title
+              onPress={() => sortData('pair')}
+            >
+              Pari
+              {sortConfig.key === 'pair' && (
+                <Ionicons name='arrow-up' size={16} color="black" />
+              )}
+            </DataTable.Title>
+
+            <DataTable.Title
+              onPress={() => sortData('averageT1')}
+            >
+              Keskiarvo T1
+              {sortConfig.key === 'averageT1' && (
+                <Ionicons name='arrow-up' size={16} color="black" />
+              )}
+            </DataTable.Title>
+
+            <DataTable.Title
+              onPress={() => sortData('averageT2')}
+            >
+              Keskiarvo T2
+              {sortConfig.key === 'averageT2' && (
+                <Ionicons name='arrow-up' size={16} color="black" />
+              )}
+            </DataTable.Title>
+
+            <DataTable.Title
+              onPress={() => sortData('averageTotal')}
+            >
+              Keskiarvo Yhteensä
+              {sortConfig.key === 'averageTotal' && (
+                <Ionicons name='arrow-up' size={16} color="black" />
+              )}
+            </DataTable.Title>
           </DataTable.Header>
 
           {skiAverages.map((avg, index) => (
@@ -70,5 +119,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 20,
+  },
+  scrollView: {
+    width: '100%', // Ensures the ScrollView takes the full width
+  },
+  dataTable: {
+    width: '100%', // Ensures the DataTable takes the full width
   },
 });
