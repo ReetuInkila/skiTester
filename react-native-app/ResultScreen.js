@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, Text, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { DataTable } from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function ResultScreen({ results }) {
-  // Function to calculate average for each ski (pair)
-  const calculateSkiAverages = () => {
-    // Group results by pair (Ski)
+  // Group the results by ski (pair) to calculate the averages and nested rounds
+  const calculateSkiData = () => {
     const skis = results.reduce((acc, result) => {
       if (!acc[result.pair]) {
         acc[result.pair] = [];
@@ -15,27 +14,31 @@ export default function ResultScreen({ results }) {
       return acc;
     }, {});
 
-    // Calculate average for each ski
-    const skiAverages = Object.keys(skis).map((pair) => {
+    const skiData = Object.keys(skis).map((pair) => {
       const skiResults = skis[pair];
 
-      // Average for each ski (t1 and t2)
       const averageT1 = skiResults.reduce((sum, result) => sum + result.t1, 0) / skiResults.length;
       const averageT2 = skiResults.reduce((sum, result) => sum + result.t2, 0) / skiResults.length;
       const averageTotal = skiResults.reduce((sum, result) => sum + (result.t1 + result.t2), 0) / skiResults.length;
 
-      return { pair, averageT1, averageT2, averageTotal };
+      return { pair, skiResults, averageT1, averageT2, averageTotal };
     });
 
-    return skiAverages;
+    return skiData;
   };
 
-  const [skiAverages, setSkiAverages] = useState(calculateSkiAverages);
-  const [sortConfig, setSortConfig] = useState({ key: 'pair', direction: 'asc' });
+  const [skiData, setSkiData] = useState(calculateSkiData());
+  const [expandedRows, setExpandedRows] = useState({}); // Track expanded rows
 
-  // Function to sort data
+  const toggleRow = (pair) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [pair]: !prev[pair], // Toggle the expanded state of the selected pair
+    }));
+  };
+
   const sortData = (key) => {
-    const sortedData = [...skiAverages].sort((a, b) => {
+    const sortedData = [...skiData].sort((a, b) => {
       if (a[key] < b[key]) {
         return -1;
       }
@@ -44,9 +47,7 @@ export default function ResultScreen({ results }) {
       }
       return 0;
     });
-
-    setSkiAverages(sortedData);
-    setSortConfig({ key, direction: 'asc' }); // Always set to ascending order
+    setSkiData(sortedData);
   };
 
   return (
@@ -55,50 +56,33 @@ export default function ResultScreen({ results }) {
       <ScrollView style={styles.scrollView}>
         <DataTable style={styles.dataTable}>
           <DataTable.Header>
-            <DataTable.Title
-              onPress={() => sortData('pair')}
-            >
-              Pari
-              {sortConfig.key === 'pair' && (
-                <Ionicons name='arrow-up' size={16} color="black" />
-              )}
-            </DataTable.Title>
-
-            <DataTable.Title
-              onPress={() => sortData('averageT1')}
-            >
-              Keskiarvo T1
-              {sortConfig.key === 'averageT1' && (
-                <Ionicons name='arrow-up' size={16} color="black" />
-              )}
-            </DataTable.Title>
-
-            <DataTable.Title
-              onPress={() => sortData('averageT2')}
-            >
-              Keskiarvo T2
-              {sortConfig.key === 'averageT2' && (
-                <Ionicons name='arrow-up' size={16} color="black" />
-              )}
-            </DataTable.Title>
-
-            <DataTable.Title
-              onPress={() => sortData('averageTotal')}
-            >
-              Keskiarvo Yhteensä
-              {sortConfig.key === 'averageTotal' && (
-                <Ionicons name='arrow-up' size={16} color="black" />
-              )}
-            </DataTable.Title>
+            <DataTable.Title onPress={() => sortData('pair')}>Pari</DataTable.Title>
+            <DataTable.Title onPress={() => sortData('averageT1')}>Keskiarvo T1</DataTable.Title>
+            <DataTable.Title onPress={() => sortData('averageT2')}>Keskiarvo T2</DataTable.Title>
+            <DataTable.Title onPress={() => sortData('averageTotal')}>Keskiarvo Yhteensä</DataTable.Title>
           </DataTable.Header>
 
-          {skiAverages.map((avg, index) => (
-            <DataTable.Row key={index}>
-              <DataTable.Cell>{avg.pair}</DataTable.Cell>
-              <DataTable.Cell>{avg.averageT1.toFixed(2)}</DataTable.Cell>
-              <DataTable.Cell>{avg.averageT2.toFixed(2)}</DataTable.Cell>
-              <DataTable.Cell>{avg.averageTotal.toFixed(2)}</DataTable.Cell>
-            </DataTable.Row>
+          {skiData.map((ski, index) => (
+            <React.Fragment key={index}>
+              <TouchableOpacity onPress={() => toggleRow(ski.pair)}>
+                <DataTable.Row>
+                  <DataTable.Cell>{ski.pair}</DataTable.Cell>
+                  <DataTable.Cell>{ski.averageT1.toFixed(2)}</DataTable.Cell>
+                  <DataTable.Cell>{ski.averageT2.toFixed(2)}</DataTable.Cell>
+                  <DataTable.Cell>{ski.averageTotal.toFixed(2)}</DataTable.Cell>
+                </DataTable.Row>
+              </TouchableOpacity>
+
+              {expandedRows[ski.pair] &&
+                ski.skiResults.map((result, index) => (
+                  <DataTable.Row key={`nested-${index}`} style={styles.nestedRow}>
+                    <DataTable.Cell>{`Kierros ${result.round}`}</DataTable.Cell>
+                    <DataTable.Cell>{result.t1.toFixed(2)}</DataTable.Cell>
+                    <DataTable.Cell>{result.t2.toFixed(2)}</DataTable.Cell>
+                    <DataTable.Cell>{(result.t1 + result.t2).toFixed(2)}</DataTable.Cell>
+                  </DataTable.Row>
+                ))}
+            </React.Fragment>
           ))}
         </DataTable>
       </ScrollView>
@@ -121,9 +105,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   scrollView: {
-    width: '100%', // Ensures the ScrollView takes the full width
+    width: '100%',
   },
   dataTable: {
-    width: '100%', // Ensures the DataTable takes the full width
+    width: '100%',
+  },
+  nestedRow: {
+    backgroundColor: '#f1f1f1',
   },
 });
