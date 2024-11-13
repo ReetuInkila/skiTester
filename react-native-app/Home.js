@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { DataTable } from 'react-native-paper';
 
 export default function HomeScreen(props) {
@@ -19,7 +19,6 @@ export default function HomeScreen(props) {
   }, []);
 
   useEffect(() => {
-    // Ensure WebSocket connection remains active but update the message handler
     ws.onmessage = (e) => {
       if (order.length > 0) {
         newResult(e.data);
@@ -27,10 +26,7 @@ export default function HomeScreen(props) {
         console.warn('Order not populated yet; message ignored.');
       }
     };
-  
     console.log('WebSocket message handler updated based on new order:', order);
-  
-    // Clean up is not necessary here as we're only updating the handler
   }, [order]);
 
   useEffect(() => {
@@ -78,27 +74,51 @@ export default function HomeScreen(props) {
   }, [data]);
 
   return (
-    <View>
-      <Text>{serverState}</Text>
+    <View style={styles.container}>
+      <Text style={styles.status}>{serverState}</Text>
       <DataTable>
         <DataTable.Header>
-          <DataTable.Title>Pari</DataTable.Title>
-          <DataTable.Title>Kierros</DataTable.Title>
+          <DataTable.Title>Pair</DataTable.Title>
+          <DataTable.Title>Round</DataTable.Title>
           <DataTable.Title>T1</DataTable.Title>
           <DataTable.Title>T2</DataTable.Title>
-          <DataTable.Title>T Tot</DataTable.Title>
+          <DataTable.Title>Total</DataTable.Title>
         </DataTable.Header>
-
-        {data.results.map((result, index) => (
-          <DataTable.Row key={index}>
-            <DataTable.Cell>{result.pair}</DataTable.Cell>
-            <DataTable.Cell>{result.round}</DataTable.Cell>
-            <DataTable.Cell>{result.t1}</DataTable.Cell>
-            <DataTable.Cell>{result.t2}</DataTable.Cell>
-            <DataTable.Cell>{result.t1 + result.t2}</DataTable.Cell>
-          </DataTable.Row>
-        ))}
       </DataTable>
+      <ScrollView style={styles.scrollView}>
+        <DataTable>
+          {data.results.map((result, index) => (
+            <DataTable.Row key={index}>
+              <DataTable.Cell>{result.pair}</DataTable.Cell>
+              <DataTable.Cell>{result.round}</DataTable.Cell>
+              <DataTable.Cell>{result.t1}</DataTable.Cell>
+              <DataTable.Cell>{result.t2}</DataTable.Cell>
+              <DataTable.Cell>{result.t1 + result.t2}</DataTable.Cell>
+            </DataTable.Row>
+          ))}
+        </DataTable>
+      </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9f9f9',
+    paddingTop: 10, // Adding a little padding to avoid issues on Web
+  },
+  status: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    margin: 10,
+    color: '#333',
+  },
+  scrollView: {
+    flex: 1,
+    marginHorizontal: 10,
+    marginBottom: 20,
+    overflow: 'auto', // Ensure scroll is enabled
+    maxHeight: '80vh', // Limit height to 80% of the viewport height (useful for web)
+  },
+});
