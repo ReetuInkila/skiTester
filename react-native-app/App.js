@@ -20,7 +20,7 @@ export default function App() {
         <Stack.Screen
           name="Home"
           options={({ navigation }) => ({
-            title: 'Home',
+            title: 'Mittaus',
             headerRight: () => (
               <TouchableOpacity
                 onPress={() => navigation.navigate('Settings')}
@@ -33,7 +33,7 @@ export default function App() {
         >
           {(props) => <HomeScreen {...props} pairs={pairs} rounds={rounds} />}
         </Stack.Screen>
-        <Stack.Screen name="Settings">
+        <Stack.Screen name="Settings" options={{ title: 'Asetukset' }}>
           {(props) => (
             <SettingsScreen
               {...props}
