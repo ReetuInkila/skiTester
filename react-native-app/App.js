@@ -1,37 +1,33 @@
 import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet } from 'react-native';
 import StartScreen from './StartScreen';
 import HomeScreen from './Home';
 import SettingsScreen from './Settings';
+import ResultScreen from './ResultScreen';
 
 const Stack = createStackNavigator();
 
 export default function App() {
   const [pairs, setPairs] = useState(5);
   const [rounds, setRounds] = useState(5);
+  const [data, setData] = useState({ pairs: pairs, rounds: rounds, results: [] });
 
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Start">
         <Stack.Screen name="Start" component={StartScreen} options={{ title: 'Aloitus' }} />
-        <Stack.Screen
-          name="Home"
-          options={({ navigation }) => ({
-            title: 'Mittaus',
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Settings')}
-                style={styles.headerButton}
-              >
-                <Ionicons name="settings-outline" size={24} color="black" />
-              </TouchableOpacity>
-            ),
-          })}
-        >
-          {(props) => <HomeScreen {...props} pairs={pairs} rounds={rounds} />}
+        <Stack.Screen name="Home" options={{title: 'Mittaus'}}>
+          {(props) => (
+            <HomeScreen
+              {...props}
+              data={data}
+              setData={setData}
+              pairs={pairs}
+              rounds={rounds}
+            />
+          )}
         </Stack.Screen>
         <Stack.Screen name="Settings" options={{ title: 'Asetukset' }}>
           {(props) => (
@@ -41,6 +37,14 @@ export default function App() {
               setPairs={setPairs}
               rounds={rounds}
               setRounds={setRounds}
+            />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Results" options={{ title: 'Tulokset' }}>
+          {(props) => (
+            <ResultScreen
+              {...props}
+              results={data.results}
             />
           )}
         </Stack.Screen>

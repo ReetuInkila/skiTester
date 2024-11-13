@@ -1,6 +1,6 @@
 // Settings.js
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Button, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Button} from 'react-native';
 
 export default function SettingsScreen({ pairs, setPairs, rounds, setRounds, navigation }) {
   // Local state for temporary values
