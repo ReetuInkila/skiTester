@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity } from 'react-native';
 import StartScreen from './StartScreen';
 import HomeScreen from './Home';
 import SettingsScreen from './Settings';
 import ResultScreen from './ResultScreen';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const Stack = createStackNavigator();
 
@@ -17,8 +18,31 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Start">
-        <Stack.Screen name="Start" component={StartScreen} options={{ title: 'Aloitus' }} />
-        <Stack.Screen name="Home" options={{title: 'Mittaus'}}>
+        {/* Start Screen */}
+        <Stack.Screen
+          name="Start"
+          component={StartScreen}
+          options={{
+            title: 'Aloitus',
+            headerTitle: () => <Image source={require('./assets/logo.png')} style={styles.logo} />,
+          }}
+        />
+
+        {/* Home Screen */}
+        <Stack.Screen
+          name="Home"
+          options={({ navigation }) => ({
+            headerTitle: () => <Image source={require('./assets/logo.png')} style={styles.logo} />,
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Settings')}
+                style={styles.headerButton}
+              >
+                <Ionicons name="settings-outline" size={24} color="black" />
+              </TouchableOpacity>
+            ),
+          })}
+        >
           {(props) => (
             <HomeScreen
               {...props}
@@ -29,7 +53,15 @@ export default function App() {
             />
           )}
         </Stack.Screen>
-        <Stack.Screen name="Settings" options={{ title: 'Asetukset' }}>
+
+        {/* Settings Screen */}
+        <Stack.Screen
+          name="Settings"
+          options={{
+            title: 'Asetukset',
+            headerTitle: () => <Image source={require('./assets/logo.png')} style={styles.logo} />,
+          }}
+        >
           {(props) => (
             <SettingsScreen
               {...props}
@@ -40,7 +72,15 @@ export default function App() {
             />
           )}
         </Stack.Screen>
-        <Stack.Screen name="Results" options={{ title: 'Tulokset' }}>
+
+        {/* Results Screen */}
+        <Stack.Screen
+          name="Results"
+          options={{
+            title: 'Tulokset',
+            headerTitle: () => <Image source={require('./assets/logo.png')} style={styles.logo} />,
+          }}
+        >
           {(props) => (
             <ResultScreen
               {...props}
@@ -54,7 +94,10 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  logo: {
+    height: 40, // Adjust logo height
+    resizeMode: 'contain', // Ensure the logo fits nicely
+  },
   headerButton: {
-    marginRight: 15,
   },
 });
