@@ -55,16 +55,17 @@ export default function Results() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tulokset</Text>
-      <ScrollView horizontal>
-        <DataTable style={styles.dataTable}>
-          <DataTable.Header>
-            <DataTable.Title onPress={() => sortData('pair')}>Pari</DataTable.Title>
-            <DataTable.Title onPress={() => sortData('averageT1')}>T1</DataTable.Title>
-            <DataTable.Title onPress={() => sortData('averageT2')}>T2</DataTable.Title>
-            <DataTable.Title onPress={() => sortData('averageTotal')}>Yhteensä</DataTable.Title>
-          </DataTable.Header>
+      <DataTable>
+        <DataTable.Header>
+          <DataTable.Title onPress={() => sortData('pair')}>Pari</DataTable.Title>
+          <DataTable.Title onPress={() => sortData('averageT1')}>T1</DataTable.Title>
+          <DataTable.Title onPress={() => sortData('averageT2')}>T2</DataTable.Title>
+          <DataTable.Title onPress={() => sortData('averageTotal')}>Yhteensä</DataTable.Title>
+        </DataTable.Header>
+      </DataTable>
 
+      <DataTable style={styles.dataTable}>
+        <ScrollView>
           {skiData.map((ski, index) => (
             <React.Fragment key={index}>
               <TouchableOpacity onPress={() => toggleRow(ski.pair)}>
@@ -87,8 +88,8 @@ export default function Results() {
                 ))}
             </React.Fragment>
           ))}
-        </DataTable>
-      </ScrollView>
+        </ScrollView>
+      </DataTable>
     </View>
   );
 }
@@ -96,8 +97,6 @@ export default function Results() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#f9f9f9',
     padding: 10,
   },
