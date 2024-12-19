@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { DataTable } from 'react-native-paper';
-import { router, useLocalSearchParams, Link } from 'expo-router';
+import { router, useLocalSearchParams} from 'expo-router'
 
 export default function HomeScreen() {
-  const [pairs, setPairs] = useState(2);
-  const [rounds, setRounds] = useState(2);
+  const local = useLocalSearchParams(); // Retrieve query parameters
+  const [pairs, setPairs] = useState(Number(local.pairs) || 5);;
+  const [rounds, setRounds] = useState(Number(local.rounds) || 5);;
   const [data, setData] = useState({ pairs: pairs, rounds: rounds, results: [] });
   const [serverState, setServerState] = useState('Loading...');
   const [order, setOrder] = useState([]);

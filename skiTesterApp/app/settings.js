@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, Button } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 
 export default function SettingsScreen() {
   const [pairs, setPairs] = useState(5); // Tallennetaan numeroina
   const [rounds, setRounds] = useState(5); // Tallennetaan numeroina
 
-  const router = useRouter();
-
   const handleSave = () => {
+    console.log(pairs);
     router.push({
       pathname: '/home',
       params: { pairs: pairs, rounds: rounds },
