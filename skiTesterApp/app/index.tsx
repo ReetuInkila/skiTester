@@ -1,14 +1,20 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 export default function StartScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <Text style={styles.question}>Aloitetaanko uusi mittaus?</Text>
       <View style={styles.buttons}>
-        <Link href="/settings">Kyllä</Link>
-        <Link href="/home">Ei</Link>
+        <View style={styles.button}>
+          <Button title="Kyllä" onPress={() => router.push('/settings')} />
+        </View>
+        <View style={styles.button}>
+          <Button title="Ei" onPress={() => router.push('/home')} />
+        </View>
       </View>
     </View>
   );
@@ -30,5 +36,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '80%',
+  },
+  button: {
+    flex: 1,
+    marginHorizontal: 10,
   },
 });
