@@ -22,6 +22,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
+      <Button title="Aloita mittaus" onPress={handleSave} />
       <Text style={styles.label}>Suksien lukumäärä:</Text>
       <TextInput
         style={styles.input}
@@ -36,7 +37,6 @@ export default function SettingsScreen() {
         value={String(rounds)} // Näytetään arvo tekstimuodossa
         onChangeText={(value) => handleNumberInput(value, setRounds)}
       />
-      <Button title="Save" onPress={handleSave} />
     </View>
   );
 }
