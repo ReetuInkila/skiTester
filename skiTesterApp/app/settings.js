@@ -25,7 +25,6 @@ export default function SettingsScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // iOS: padding, Android: height
     >
-      <Button title="Aloita mittaus" onPress={handleSave} />
       <Text style={styles.label}>Suksien lukumäärä:</Text>
       <TextInput
         style={styles.input}
