@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
+import { View, Text, Button, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 
 export default function StartScreen() {
@@ -29,7 +29,6 @@ const styles = StyleSheet.create({
   },
   question: {
     fontSize: 20,
-    marginBottom: 30,
     textAlign: 'center',
   },
   buttons: {
