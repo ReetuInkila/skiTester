@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Button } from 'react-native';
+import { StyleSheet, Text, KeyboardAvoidingView, TextInput, Button, Platform } from 'react-native';
 import { router } from 'expo-router';
 
 export default function SettingsScreen() {
@@ -21,23 +21,27 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // iOS: padding, Android: height
+    >
       <Button title="Aloita mittaus" onPress={handleSave} />
       <Text style={styles.label}>Suksien lukumäärä:</Text>
       <TextInput
         style={styles.input}
         keyboardType="numeric"
-        value={String(pairs)} // Näytetään arvo tekstimuodossa
+        value={String(pairs)}
         onChangeText={(value) => handleNumberInput(value, setPairs)}
       />
       <Text style={styles.label}>Kierrosten lukumäärä:</Text>
       <TextInput
         style={styles.input}
         keyboardType="numeric"
-        value={String(rounds)} // Näytetään arvo tekstimuodossa
+        value={String(rounds)}
         onChangeText={(value) => handleNumberInput(value, setRounds)}
       />
-    </View>
+      <Button title="Aloita mittaus" onPress={handleSave} />
+    </KeyboardAvoidingView>
   );
 }
 
