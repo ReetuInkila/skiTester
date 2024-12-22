@@ -66,37 +66,49 @@ void loop() {
   }
 }
 
-// Function to read sensors and update t1 and t2
 void readSensors() {
-  val = digitalRead(sensor); // Read the sensor
-  if (val == 0) {
-    time1 = millis();
-    Serial.println("Time1");
-    error = "Not all sensors read";
-    buzz();
-    while (millis() - time1 < 60000) { // Allow up to 60 seconds for each run
-      val = digitalRead(sensor); // Read the sensor
-      if (val == 0) {
-        if (time2 == 0) {
-          time2 = millis();
-          Serial.println("Time2");
-          buzz();
-        } else {
-          time3 = millis();
-          Serial.println("Time3");
-          t1 = (time2 - time1) / 1000.0;
-          t2 = (time3 - time2) / 1000.0;
+  static unsigned long startTime = 0;
+  static int step = 0; // Vaiheiden hallinta
 
-          time1 = 0;
-          time2 = 0;
-          time3 = 0;
-          error = "";
-          buzz();
-          break;
-        }
+  val = digitalRead(sensor);
+  if (val == 0) {
+    if (step == 0) {
+      time1 = millis();
+      startTime = millis();
+      Serial.println("Time1");
+      error = "Not all sensors read";
+      buzz();
+      step = 1;
+    } else if (step == 1 && millis() - startTime < 20000) {
+      if (digitalRead(sensor) == 0 && time2 == 0) {
+        time2 = millis();
+        Serial.println("Time2");
+        buzz();
+        step = 2;
+      }
+    } else if (step == 2 && millis() - startTime < 20000) {
+      if (digitalRead(sensor) == 0 && time3 == 0) {
+        time3 = millis();
+        Serial.println("Time3");
+        t1 = (time2 - time1) / 1000.0;
+        t2 = (time3 - time2) / 1000.0;
+
+        // Tulosta tulokset
+        Serial.print("T1: "); Serial.println(t1, 3);
+        Serial.print("T2: "); Serial.println(t2, 3);
+
+        // Nollaa muuttujat seuraavaa kierrosta varten
+        time1 = 0;
+        time2 = 0;
+        time3 = 0;
+        error = "";
+        buzz();
+        step = 0;
       }
     }
-    Serial.println("Run ended!");
+  } else if (millis() - startTime >= 20000) {
+    Serial.println("Run ended with timeout!");
+    step = 0; // Reset for the next run
   }
 }
 
