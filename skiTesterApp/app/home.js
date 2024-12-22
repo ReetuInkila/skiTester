@@ -98,7 +98,7 @@ export default function HomeScreen() {
       </DataTable>
       <ScrollView style={styles.scrollView}>
         <DataTable>
-          {data.results.map((result, index) => (
+          {[...data.results].reverse().map((result, index) => (
             <DataTable.Row key={index}>
               <DataTable.Cell>{result.pair}</DataTable.Cell>
               <DataTable.Cell>{result.round}</DataTable.Cell>
