@@ -63,11 +63,10 @@ export default function Results() {
           <DataTable.Title onPress={() => sortData('averageTotal')}>Yhteensä</DataTable.Title>
         </DataTable.Header>
       </DataTable>
-
-      <DataTable style={styles.dataTable}>
-        <ScrollView>
+      <ScrollView style={styles.scrollView}>
+        <DataTable style={styles.dataTable}>
           {skiData.map((ski, index) => (
-            <React.Fragment key={index}>
+            <React.Fragment key={index} >
               <TouchableOpacity onPress={() => toggleRow(ski.pair)}>
                 <DataTable.Row>
                   <DataTable.Cell>{ski.pair}</DataTable.Cell>
@@ -88,8 +87,8 @@ export default function Results() {
                 ))}
             </React.Fragment>
           ))}
-        </ScrollView>
-      </DataTable>
+        </DataTable>
+      </ScrollView>
     </View>
   );
 }
@@ -98,19 +97,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9f9f9',
-    padding: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
+    paddingTop: 10,
   },
   scrollView: {
-    width: '100%',
-  },
-  dataTable: {
-    width: '100vw',
+    flex: 1,
+    marginHorizontal: 10,
+    marginBottom: 20,
+    overflow: 'auto',
   },
   nestedRow: {
     backgroundColor: '#f1f1f1',
