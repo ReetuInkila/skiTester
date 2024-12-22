@@ -102,10 +102,10 @@ export default function HomeScreen() {
             <DataTable.Row key={index}>
               <DataTable.Cell>{result.pair}</DataTable.Cell>
               <DataTable.Cell>{result.round}</DataTable.Cell>
-              <DataTable.Cell>{result.t1}</DataTable.Cell>
-              <DataTable.Cell>{result.t2}</DataTable.Cell>
+              <DataTable.Cell>{result.t1.toFixed(3)}</DataTable.Cell>
+              <DataTable.Cell>{result.t2.toFixed(3)}</DataTable.Cell>
               <DataTable.Cell>
-                {Number(result.t1) + Number(result.t2) || 0}
+                {(Number(result.t1) + Number(result.t2)).toFixed(3) || 0}
               </DataTable.Cell>
             </DataTable.Row>
           ))}
