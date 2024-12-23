@@ -26,7 +26,7 @@ AsyncWebSocket ws("/ws");
 // Function declarations
 void buzz();
 void readSensors();
-void notifyClients();
+void notifyClients(String message);
 
 void setup() {
   pinMode(sensor, INPUT); // set sensor pin as input
@@ -60,73 +60,72 @@ void setup() {
 void loop() {
   readSensors();
 
+  if(error != ""){
+    notifyClients(error);
+    error = "";
+  }
+
   // Notify clients if t1 and t2 are updated
   if (t1 != 0 && t2 != 0) {
-    notifyClients();
+    notifyClients("");
   }
 }
 
+// Function to read sensors and update t1 and t2
 void readSensors() {
-  static unsigned long startTime = 0;
-  static int step = 0; // Vaiheiden hallinta
-
-  val = digitalRead(sensor);
+  val = digitalRead(sensor); // Read the sensor
   if (val == 0) {
-    if (step == 0) {
-      time1 = millis();
-      startTime = millis();
-      Serial.println("Time1");
-      error = "Not all sensors read";
-      buzz();
-      step = 1;
-    } else if (step == 1 && millis() - startTime < 20000) {
-      if (digitalRead(sensor) == 0 && time2 == 0) {
-        time2 = millis();
-        Serial.println("Time2");
-        buzz();
-        step = 2;
-      }
-    } else if (step == 2 && millis() - startTime < 20000) {
-      if (digitalRead(sensor) == 0 && time3 == 0) {
-        time3 = millis();
-        Serial.println("Time3");
-        t1 = (time2 - time1) / 1000.0;
-        t2 = (time3 - time2) / 1000.0;
-
-        // Tulosta tulokset
-        Serial.print("T1: "); Serial.println(t1, 3);
-        Serial.print("T2: "); Serial.println(t2, 3);
-
-        // Nollaa muuttujat seuraavaa kierrosta varten
-        time1 = 0;
-        time2 = 0;
-        time3 = 0;
-        error = "";
-        buzz();
-        step = 0;
+    time1 = millis();
+    Serial.println("Time1");
+    error = "Not all sensors read";
+    buzz();
+    while (millis() - time1 < 20000) { // Allow up to 20 seconds for each run
+      val = digitalRead(sensor); // Read the sensor
+      if (val == 0) {
+        if (time2 == 0) {
+          time2 = millis();
+          Serial.println("Time2");
+          buzz();
+        } else {
+          time3 = millis();
+          Serial.println("Time3");
+          t1 = (time2 - time1) / 1000.0;
+          t2 = (time3 - time2) / 1000.0;
+          error = "";
+          buzz();
+          break;
+        }
       }
     }
-  } else if (millis() - startTime >= 20000) {
-    Serial.println("Run ended with timeout!");
-    step = 0; // Reset for the next run
+    time1 = 0;
+    time2 = 0;
+    time3 = 0;
+    Serial.println("Run ended!");
   }
 }
 
 // Function to send t1 and t2 to all connected WebSocket clients
-void notifyClients() {
-  DynamicJsonDocument jsonDoc(1024);
-  jsonDoc["t1"] = t1;
-  jsonDoc["t2"] = t2;
+void notifyClients(String message) {
 
+  DynamicJsonDocument jsonDoc(1024);
+
+  if (message != "") {
+    // Lähetä virheilmoitus WebSocketin kautta
+    jsonDoc["error"] = message;
+  } else {
+    // Lähetä normaalit tulokset
+    jsonDoc["t1"] = t1;
+    jsonDoc["t2"] = t2;
+
+    // Reset t1 and t2 after notifying clients
+    t1 = 0;
+    t2 = 0;
+  }
+
+  // Serialize the JSON and send it to all WebSocket clients
   String jsonResponse;
   serializeJson(jsonDoc, jsonResponse);
-
-  // Broadcast the JSON data to all connected WebSocket clients
   ws.textAll(jsonResponse);
-
-  // Reset t1 and t2 after notifying clients
-  t1 = 0;
-  t2 = 0;
 }
 
 void buzz() {
