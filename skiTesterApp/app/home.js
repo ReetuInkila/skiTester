@@ -56,6 +56,13 @@ export default function HomeScreen() {
   const handleWebSocketMessage = (jsonData) => {
     try {
       const parsedData = JSON.parse(jsonData);
+
+      // Tarkista, sisältääkö viesti virheilmoituksen
+      if (parsedData.error) {
+        alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
+        return;
+      }
+
       setData((prevData) => {
         const updatedResults = [
           ...prevData.results,
