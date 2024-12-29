@@ -1,12 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
-import { DataTable, Appbar } from 'react-native-paper';
-import { router, useLocalSearchParams} from 'expo-router'
+import { DataTable } from 'react-native-paper';
+import { router, useLocalSearchParams } from 'expo-router';
 
 export default function HomeScreen() {
   const local = useLocalSearchParams(); // Retrieve query parameters
-  const [pairs, setPairs] = useState(Number(local.pairs) || 5);;
-  const [rounds, setRounds] = useState(Number(local.rounds) || 5);;
+  const [pairs, setPairs] = useState(Number(local.pairs) || 5);
+  const [rounds, setRounds] = useState(Number(local.rounds) || 5);
+  const [names, setNames] = useState(JSON.parse(local.names || '[]'));
+  const [temperature, setTemperature] = useState(local.temperature || 'N/A');
+  const [snowQuality, setSnowQuality] = useState(local.snowQuality || 'N/A');
+  const [baseHardness, setBaseHardness] = useState(local.baseHardness || 'N/A');
   const [data, setData] = useState({ pairs: pairs, rounds: rounds, results: [] });
   const [serverState, setServerState] = useState('Yhdistää...');
   const [order, setOrder] = useState([]);
@@ -41,23 +45,22 @@ export default function HomeScreen() {
     const newOrder = [];
     for (let round = 1; round <= rounds; round++) {
       if (round % 2 !== 0) {
-        for (let pair = 1; pair <= pairs; pair++) {
-          newOrder.push({ round, pair });
+        for (let i = 0; i < pairs; i++) {
+          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
         }
       } else {
-        for (let pair = pairs; pair > 0; pair--) {
-          newOrder.push({ round, pair });
+        for (let i = pairs - 1; i >= 0; i--) {
+          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
         }
       }
     }
     setOrder(newOrder);
-  }, [pairs, rounds]);
+  }, [pairs, rounds, names]);
 
   const handleWebSocketMessage = (jsonData) => {
     try {
       const parsedData = JSON.parse(jsonData);
 
-      // Tarkista, sisältääkö viesti virheilmoituksen
       if (parsedData.error) {
         alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
         return;
@@ -68,7 +71,7 @@ export default function HomeScreen() {
           ...prevData.results,
           {
             round: order[indexRef.current].round,
-            pair: order[indexRef.current].pair,
+            name: order[indexRef.current].name,
             ...parsedData,
           },
         ];
@@ -77,7 +80,12 @@ export default function HomeScreen() {
         } else {
           router.push({
             pathname: '/results',
-            params: { results: JSON.stringify(updatedResults) },
+            params: {
+              results: JSON.stringify(updatedResults),
+              temperature,
+              snowQuality,
+              baseHardness,
+            },
           });
         }
         return { ...prevData, results: updatedResults };
@@ -86,13 +94,11 @@ export default function HomeScreen() {
       console.error('Error parsing WebSocket data:', error);
     }
   };
-  
 
   return (
     <View style={styles.container}>
       <Text style={styles.status}>
-        Seuraavaksi pari: {order[indexRef.current]?.pair || 'N/A'}, kierros:{' '}
-        {order[indexRef.current]?.round || 'N/A'}
+        Seuraavaksi: {order[indexRef.current]?.name || 'N/A'} kierros: {order[indexRef.current]?.round || 'N/A'}
       </Text>
       <DataTable>
         <DataTable.Header>
@@ -107,7 +113,7 @@ export default function HomeScreen() {
         <DataTable>
           {[...data.results].reverse().map((result, index) => (
             <DataTable.Row key={index}>
-              <DataTable.Cell>{result.pair}</DataTable.Cell>
+              <DataTable.Cell>{result.name}</DataTable.Cell>
               <DataTable.Cell>{result.round}</DataTable.Cell>
               <DataTable.Cell>{result.t1.toFixed(3)}</DataTable.Cell>
               <DataTable.Cell>{result.t2.toFixed(3)}</DataTable.Cell>
@@ -144,7 +150,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   footer: {
-    height: 50, // Kiinteä korkeus footerille
+    height: 50,
     backgroundColor: '#eee',
     justifyContent: 'center',
     alignItems: 'center',
