@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
+#include <vector>
 
 const char *ssid = "Ski-Tester-1";
 const char *password = "123456789";
@@ -19,6 +20,15 @@ float t1 = 0, t2 = 0;
 String error = ""; // Variable to store error message
 unsigned long messageId = 0; // Unique message ID
 
+// Rakenne vahvistamattomien viestien hallintaan
+struct Message {
+    unsigned long id;
+    String content;
+};
+
+std::vector<Message> messages;
+
+
 AsyncWebServer server(80);
 
 // Create a WebSocket object
@@ -28,6 +38,7 @@ AsyncWebSocket ws("/ws");
 void buzz();
 void readSensors();
 void notifyClients(String message);
+void removeMessageById(unsigned long id);
 
 void setup() {
   pinMode(sensor, INPUT); // set sensor pin as input
@@ -55,10 +66,19 @@ void setup() {
       if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
         // Varmista, että viesti on kokonainen ja tekstimuotoinen
         data[len] = '\0'; // Lisää null-merkki datan loppuun
+        String receivedMessage = String((char *)data);
         Serial.print("Received from client: ");
-        Serial.println((char *)data);
+        Serial.println(receivedMessage);
+
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, receivedMessage);
+        
+        if (!error && doc.containsKey("id")) {
+          unsigned long id = doc["id"].as<unsigned long>();
+          removeMessageById(id);
+        }
       }
-  }
+    }
   });
 
   server.addHandler(&ws);
@@ -132,12 +152,32 @@ void notifyClients(String message) {
     t2 = 0;
   }
 
-  jsonDoc["id"] = messageId++; // Add unique ID to message
+  jsonDoc["id"] = messageId; // Add unique ID to message
 
-  // Serialize the JSON and send it to all WebSocket clients
   String jsonResponse;
   serializeJson(jsonDoc, jsonResponse);
+
+  messages.push_back({messageId, jsonResponse});
+  messageId++;
+  
   ws.textAll(jsonResponse);
+}
+
+void removeMessageById(unsigned long id) {
+  // Etsi viesti, jonka id vastaa annettua id:tä
+  auto it = std::find_if(messages.begin(), messages.end(), [id](const Message& msg) {
+    return msg.id == id;
+  });
+
+  if (it != messages.end()) {
+    // Poista löydetty viesti
+    messages.erase(it);
+    Serial.print("Removed message with id: ");
+    Serial.println(id);
+  } else {
+    Serial.print("Message with id not found: ");
+    Serial.println(id);
+  }
 }
 
 void buzz() {
