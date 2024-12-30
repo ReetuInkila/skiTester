@@ -17,6 +17,7 @@ unsigned long time3 = 0;
 float t1 = 0, t2 = 0;
 
 String error = ""; // Variable to store error message
+unsigned long messageId = 0; // Unique message ID
 
 AsyncWebServer server(80);
 
@@ -48,7 +49,16 @@ void setup() {
       Serial.println("WebSocket client connected");
     } else if (type == WS_EVT_DISCONNECT) {
       Serial.println("WebSocket client disconnected");
-    }
+    } else if (type == WS_EVT_DATA) {
+      // Kun dataa saapuu, tulosta se
+      AwsFrameInfo *info = (AwsFrameInfo *)arg;
+      if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+        // Varmista, että viesti on kokonainen ja tekstimuotoinen
+        data[len] = '\0'; // Lisää null-merkki datan loppuun
+        Serial.print("Received from client: ");
+        Serial.println((char *)data);
+      }
+  }
   });
 
   server.addHandler(&ws);
@@ -121,6 +131,8 @@ void notifyClients(String message) {
     t1 = 0;
     t2 = 0;
   }
+
+  jsonDoc["id"] = messageId++; // Add unique ID to message
 
   // Serialize the JSON and send it to all WebSocket clients
   String jsonResponse;

@@ -24,7 +24,12 @@ export default function HomeScreen() {
     newWs.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
     newWs.onmessage = (e) => {
       if (order.length > 0) {
-        handleWebSocketMessage(e.data);
+        const parsedData = JSON.parse(e.data);
+        handleWebSocketMessage(parsedData);
+        console.log("Received:", parsedData.id);
+        // Lähetä takaisin palvelimelle sama id
+        const responseMessage = JSON.stringify({ id: parsedData.id });
+        newWs.send(responseMessage);
       } else {
         console.warn('Order not populated yet; message ignored.');
       }
@@ -66,9 +71,8 @@ export default function HomeScreen() {
     setOrder(newOrder);
   }, [pairs, rounds, names]);
 
-  const handleWebSocketMessage = (jsonData) => {
+  const handleWebSocketMessage = (parsedData) => {
     try {
-      const parsedData = JSON.parse(jsonData);
 
       if (parsedData.error) {
         alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
