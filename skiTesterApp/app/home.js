@@ -17,29 +17,38 @@ export default function HomeScreen() {
   const indexRef = useRef(0);
   const ws = useRef(new WebSocket('ws://192.168.4.1/ws')).current;
 
-  useEffect(() => {
-    ws.onopen = () => setServerState('Yhdistetty.');
-    ws.onclose = () => setServerState('Ei yhteyttä.');
-    ws.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
-
-    return () => ws.close();
-  }, []);
-
-  useEffect(() => {
-    const wsListener = (e) => {
+  const connectWebSocket = () => {
+    const newWs = new WebSocket('ws://192.168.4.1/ws');
+    newWs.onopen = () => setServerState('Yhdistetty.');
+    newWs.onclose = () => setServerState('Ei yhteyttä.');
+    newWs.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
+    newWs.onmessage = (e) => {
       if (order.length > 0) {
         handleWebSocketMessage(e.data);
       } else {
         console.warn('Order not populated yet; message ignored.');
       }
     };
+    ws.current = newWs; // Päivitä viite uuteen WebSocketiin
+  };
+  
 
-    ws.onmessage = wsListener;
-
+  useEffect(() => {
+    connectWebSocket();
+  
+    const reconnectInterval = setInterval(() => {
+      if (!ws.current || ws.current.readyState === WebSocket.CLOSED) {
+        setServerState('Yritetään yhdistää uudelleen...');
+        connectWebSocket();
+      }
+    }, 5000); // Yritetään yhdistää uudelleen 5 sekunnin välein
+  
     return () => {
-      ws.onmessage = null;
+      clearInterval(reconnectInterval);
+      ws.current && ws.current.close();
     };
-  }, [order]);
+  }, [order]); // Huomioidaan order, jotta handleWebSocketMessage toimii
+  
 
   useEffect(() => {
     const newOrder = [];
