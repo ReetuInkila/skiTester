@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Button, Platform } from 'react-native';
 import { DataTable } from 'react-native-paper';
 import { useLocalSearchParams } from 'expo-router';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 export default function Results() {
-  // Receiving the object in the target component
   const { results, temperature, snowQuality, baseHardness } = useLocalSearchParams();
-  // Parse the results string back into an array
   const parsedResults = useMemo(() => JSON.parse(results || '[]'), [results]);
   console.log(parsedResults);
 
@@ -54,6 +54,58 @@ export default function Results() {
     setSkiData(sortedData);
   };
 
+  const generatePDF = async () => {
+    const htmlContent = `
+      <html>
+        <body>
+          <h1>Testitulokset</h1>
+          <p>Päivämäärä: ${date}</p>
+          <p>Lämpötila: ${temperature}°C</p>
+          <p>Lumi: ${snowQuality}</p>
+          <p>Pohja: ${baseHardness}</p>
+          <table border="1" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th>Nimi</th>
+                <th>T1</th>
+                <th>T2</th>
+                <th>Yhteensä</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${skiData
+                .map(
+                  (ski) => `
+                    <tr>
+                      <td>${ski.name}</td>
+                      <td>${ski.averageT1.toFixed(2)}</td>
+                      <td>${ski.averageT2.toFixed(2)}</td>
+                      <td>${ski.averageTotal.toFixed(2)}</td>
+                    </tr>
+                  `
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    try {
+      // Luo PDF-tiedosto `expo-print` avulla
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+
+      // Jaa PDF-tiedosto
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        alert('Jakaminen ei ole käytettävissä laitteellasi.');
+      }
+    } catch (error) {
+      console.log('Failed to generate pdf', error.message);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -62,6 +114,7 @@ export default function Results() {
         <Text>Lumi: {snowQuality}</Text>
         <Text>Pohja: {baseHardness}</Text>
       </View>
+      
       <DataTable>
         <DataTable.Header>
           <DataTable.Title onPress={() => sortData('name')}>Nimi</DataTable.Title>
@@ -95,6 +148,7 @@ export default function Results() {
             </React.Fragment>
           ))}
         </DataTable>
+        <Button title="Jaa PDF" onPress={generatePDF} />
       </ScrollView>
     </View>
   );
@@ -109,11 +163,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     marginBottom: 20,
-  },
-  headerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
   },
   scrollView: {
     flex: 1,
