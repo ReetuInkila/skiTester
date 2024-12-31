@@ -8,9 +8,6 @@ export default function HomeScreen() {
   const [pairs, setPairs] = useState(Number(local.pairs) || 5);
   const [rounds, setRounds] = useState(Number(local.rounds) || 5);
   const [names, setNames] = useState(JSON.parse(local.names || '[]'));
-  const [temperature, setTemperature] = useState(local.temperature || 'N/A');
-  const [snowQuality, setSnowQuality] = useState(local.snowQuality || 'N/A');
-  const [baseHardness, setBaseHardness] = useState(local.baseHardness || 'N/A');
   const [data, setData] = useState({ pairs: pairs, rounds: rounds, results: [] });
   const [serverState, setServerState] = useState('Yhdistää...');
   const [order, setOrder] = useState([]);
@@ -95,9 +92,9 @@ export default function HomeScreen() {
             pathname: '/results',
             params: {
               results: JSON.stringify(updatedResults),
-              temperature,
-              snowQuality,
-              baseHardness,
+              temperature: local.temperature || 'N/A',
+              snowQuality: local.snowQuality || 'N/A',
+              baseHardness: local.baseHardness || 'N/A',
             },
           });
         }
