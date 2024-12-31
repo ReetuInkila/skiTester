@@ -58,6 +58,11 @@ void setup() {
   ws.onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     if (type == WS_EVT_CONNECT) {
       Serial.println("WebSocket client connected");
+      // Lähetetään kaikki tallennetut viestit uudelle asiakkaalle
+        for (const auto &message : messages) {
+            client->text(message.content);
+            Serial.println(message.content);
+        }
     } else if (type == WS_EVT_DISCONNECT) {
       Serial.println("WebSocket client disconnected");
     } else if (type == WS_EVT_DATA) {
