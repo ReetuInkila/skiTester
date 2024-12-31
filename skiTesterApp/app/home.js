@@ -1,56 +1,52 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { DataTable } from 'react-native-paper';
 import { router, useLocalSearchParams } from 'expo-router';
 
 export default function HomeScreen() {
-  const local = useLocalSearchParams(); // Retrieve query parameters
+  const local = useLocalSearchParams();
   const [pairs, setPairs] = useState(Number(local.pairs) || 5);
   const [rounds, setRounds] = useState(Number(local.rounds) || 5);
   const [names, setNames] = useState(JSON.parse(local.names || '[]'));
-  const [data, setData] = useState({ pairs: pairs, rounds: rounds, results: [] });
+  const [data, setData] = useState({ pairs, rounds, results: [] });
   const [serverState, setServerState] = useState('Yhdistää...');
   const [order, setOrder] = useState([]);
   const indexRef = useRef(0);
-  const ws = useRef(new WebSocket('ws://192.168.4.1/ws')).current;
+  const wsRef = useRef(null); // WebSocket-viite
 
-  const connectWebSocket = () => {
-    const newWs = new WebSocket('ws://192.168.4.1/ws');
-    newWs.onopen = () => setServerState('Yhdistetty.');
-    newWs.onclose = () => setServerState('Ei yhteyttä.');
-    newWs.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
-    newWs.onmessage = (e) => {
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current) return; // Estetään uuden WebSocket-olion luonti, jos yhteys on jo olemassa
+
+    const ws = new WebSocket('ws://192.168.4.1/ws');
+    wsRef.current = ws; // Tallennetaan viite WebSocket-olioon
+
+    ws.onopen = () => setServerState('Yhdistetty.');
+    ws.onclose = () => {
+      setServerState('Ei yhteyttä.');
+      wsRef.current = null; // Nollataan viite, jos yhteys katkeaa
+    };
+    ws.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
+    ws.onmessage = (e) => {
+      const parsedData = JSON.parse(e.data);
       if (order.length > 0) {
-        const parsedData = JSON.parse(e.data);
         handleWebSocketMessage(parsedData);
-        console.log("Received:", parsedData.id);
-        // Lähetä takaisin palvelimelle sama id
-        const responseMessage = JSON.stringify({ id: parsedData.id });
-        newWs.send(responseMessage);
+        ws.send(JSON.stringify({ id: parsedData.id }));
       } else {
         console.warn('Order not populated yet; message ignored.');
       }
     };
-    ws.current = newWs; // Päivitä viite uuteen WebSocketiin
-  };
-  
+  }, [order]);
 
   useEffect(() => {
-    connectWebSocket();
-  
     const reconnectInterval = setInterval(() => {
-      if (!ws.current || ws.current.readyState === WebSocket.CLOSED) {
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
         setServerState('Yritetään yhdistää uudelleen...');
         connectWebSocket();
       }
-    }, 5000); // Yritetään yhdistää uudelleen 5 sekunnin välein
-  
-    return () => {
-      clearInterval(reconnectInterval);
-      ws.current && ws.current.close();
-    };
-  }, [order]); // Huomioidaan order, jotta handleWebSocketMessage toimii
-  
+    }, 5000);
+
+    return () => clearInterval(reconnectInterval); // Tyhjennetään intervalli komponentin poistuessa
+  }, [connectWebSocket]);
 
   useEffect(() => {
     const newOrder = [];
@@ -70,7 +66,6 @@ export default function HomeScreen() {
 
   const handleWebSocketMessage = (parsedData) => {
     try {
-
       if (parsedData.error) {
         alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
         return;
