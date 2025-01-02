@@ -8,7 +8,6 @@ import * as Sharing from 'expo-sharing';
 export default function Results() {
   const { results, temperature, snowQuality, baseHardness } = useLocalSearchParams();
   const parsedResults = useMemo(() => JSON.parse(results || '[]'), [results]);
-  console.log(parsedResults);
 
   const calculateSkiData = () => {
     const skis = parsedResults.reduce((acc, result) => {
