@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Button, StyleSheet, Image } from 'react-native';
+import { View, Text, Button, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 
 export default function StartScreen() {
@@ -13,7 +13,7 @@ export default function StartScreen() {
           <Button title="Kyllä" onPress={() => router.push('/settings')} />
         </View>
         <View style={styles.button}>
-          <Button title="Ei" onPress={() => router.push('/home')} />
+          <Button title="Ei" onPress={() => router.push({ pathname: '/home', params: { loadOldResults: true } })} />
         </View>
       </View>
     </View>
