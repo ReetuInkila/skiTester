@@ -1,5 +1,5 @@
 import React from 'react';
-import { SafeAreaView, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { SafeAreaView, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function StartScreen() {
@@ -37,6 +37,8 @@ export default function StartScreen() {
 const styles = StyleSheet.create({
   container:{
     alignItems: 'center',
+    backgroundColor: "white",
+    minHeight: "100%",
   },
   logo: {
     width: '90%', // Skaalaa suhteessa näytön leveyteen
