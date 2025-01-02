@@ -1,19 +1,21 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { DataTable } from 'react-native-paper';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
+import { saveDataToStorage, loadDataFromStorage } from './storage';
 
 export default function HomeScreen() {
-  const local = useLocalSearchParams();
-  const [pairs, setPairs] = useState(Number(local.pairs) || 5);
-  const [rounds, setRounds] = useState(Number(local.rounds) || 5);
-  const [names, setNames] = useState(JSON.parse(local.names || '[]'));
-  const [data, setData] = useState({ pairs, rounds, results: [] });
+  const params = useLocalSearchParams();
+  const [pairs, setPairs] = useState(5);
+  const [rounds, setRounds] = useState(5);
+  const [names, setNames] = useState([]);
+  const [data, setData] = useState({ pairs: 5, rounds: 5, results: [] });
   const [serverState, setServerState] = useState('Yhdistää...');
   const [order, setOrder] = useState([]);
   const indexRef = useRef(0);
-  const wsRef = useRef(null); // WebSocket-viite
+  const wsRef = useRef(null);
 
+  // WebSocket-yhteyden muodostaminen
   const connectWebSocket = useCallback(() => {
     if (wsRef.current) return; // Estetään uuden WebSocket-olion luonti, jos yhteys on jo olemassa
 
@@ -37,40 +39,13 @@ export default function HomeScreen() {
     };
   }, [order]);
 
-  useEffect(() => {
-    const reconnectInterval = setInterval(() => {
-      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-        setServerState('Yritetään yhdistää uudelleen...');
-        connectWebSocket();
-      }
-    }, 5000);
-
-    return () => clearInterval(reconnectInterval); // Tyhjennetään intervalli komponentin poistuessa
-  }, [connectWebSocket]);
-
-  useEffect(() => {
-    const newOrder = [];
-    for (let round = 1; round <= rounds; round++) {
-      if (round % 2 !== 0) {
-        for (let i = 0; i < pairs; i++) {
-          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
-        }
-      } else {
-        for (let i = pairs - 1; i >= 0; i--) {
-          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
-        }
-      }
-    }
-    setOrder(newOrder);
-  }, [pairs, rounds, names]);
-
   const handleWebSocketMessage = (parsedData) => {
     try {
       if (parsedData.error) {
         alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
         return;
       }
-
+  
       setData((prevData) => {
         const updatedResults = [
           ...prevData.results,
@@ -87,18 +62,70 @@ export default function HomeScreen() {
             pathname: '/results',
             params: {
               results: JSON.stringify(updatedResults),
-              temperature: local.temperature || 'N/A',
-              snowQuality: local.snowQuality || 'N/A',
-              baseHardness: local.baseHardness || 'N/A',
             },
           });
         }
-        return { ...prevData, results: updatedResults };
+  
+        // Tallennetaan data jokaisen päivityksen jälkeen
+        const updatedData = { ...prevData, results: updatedResults };
+        saveDataToStorage(updatedData);
+  
+        return updatedData;
       });
     } catch (error) {
       console.error('Error parsing WebSocket data:', error);
     }
   };
+  
+
+  // Ladataan vanhat tulokset vain, jos parametri `loadOldResults` on true
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const oldData = await loadDataFromStorage();
+        if (oldData) {
+          console.log('Loaded data:', oldData);
+          setData(oldData);
+          indexRef.current = oldData.results?.length || 0; // Safeguard for `results`
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+
+    if (params?.loadOldResults) { // Safeguard for `params`
+      loadData();
+    }
+  }, [params?.loadOldResults]);
+
+  // WebSocket-yhteyden hallinta
+  useEffect(() => {
+    const reconnectInterval = setInterval(() => {
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        setServerState('Yritetään yhdistää uudelleen...');
+        connectWebSocket();
+      }
+    }, 5000);
+
+    return () => clearInterval(reconnectInterval);
+  }, [connectWebSocket]);
+
+  // Järjestyksen laskeminen
+  useEffect(() => {
+    const newOrder = [];
+    for (let round = 1; round <= rounds; round++) {
+      if (round % 2 !== 0) {
+        for (let i = 0; i < pairs; i++) {
+          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
+        }
+      } else {
+        for (let i = pairs - 1; i >= 0; i--) {
+          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
+        }
+      }
+    }
+    setOrder(newOrder);
+  }, [pairs, rounds, names]);
 
   return (
     <View style={styles.container}>
