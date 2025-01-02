@@ -5,8 +5,8 @@ export default function RootLayout() {
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ title: 'Asetukset' }} />
-      <Stack.Screen name="home" options={{ title: 'Mittaa' }} />
-      <Stack.Screen name="results" options={{ title: 'Tulokset' }} />
+      <Stack.Screen name="home" options={{headerShown: false }} />
+      <Stack.Screen name="results" options={{ headerShown: false }} />
     </Stack>
   );
 }
