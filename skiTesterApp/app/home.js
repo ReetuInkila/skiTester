@@ -5,13 +5,22 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { saveDataToStorage, loadDataFromStorage } from './storage';
 
 export default function HomeScreen() {
-  const params = useLocalSearchParams();
-  const [pairs, setPairs] = useState(5);
-  const [rounds, setRounds] = useState(5);
-  const [names, setNames] = useState([]);
-  const [data, setData] = useState({ pairs: 5, rounds: 5, results: [] });
+  const params = useLocalSearchParams(); // Fetch query params
+  const { temperature, snowQuality, baseHardness, pairs, rounds, names} = params; // Destructure specific params
+
+  const [data, setData] = useState({
+    order:[],
+    names: JSON.parse(names|| '[]'),
+    temperature: temperature || 0, 
+    snowQuality: snowQuality || 'unknown', 
+    baseHardness: baseHardness || 'unknown', 
+    pairs: pairs || 5, 
+    rounds: rounds || 5, 
+    results: [] 
+  });
+
   const [serverState, setServerState] = useState('Yhdistää...');
-  const [order, setOrder] = useState([]);
+
   const indexRef = useRef(0);
   const wsRef = useRef(null);
 
@@ -30,14 +39,14 @@ export default function HomeScreen() {
     ws.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
     ws.onmessage = (e) => {
       const parsedData = JSON.parse(e.data);
-      if (order.length > 0) {
+      if (data.order.length > 0) {
         handleWebSocketMessage(parsedData);
         ws.send(JSON.stringify({ id: parsedData.id }));
       } else {
         console.warn('Order not populated yet; message ignored.');
       }
     };
-  }, [order]);
+  }, [data.order]);
 
   const handleWebSocketMessage = (parsedData) => {
     try {
@@ -45,26 +54,17 @@ export default function HomeScreen() {
         alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
         return;
       }
-  
+
       setData((prevData) => {
         const updatedResults = [
           ...prevData.results,
           {
-            round: order[indexRef.current].round,
-            name: order[indexRef.current].name,
+            round: prevData.order[indexRef.current].round,
+            name: prevData.order[indexRef.current].name,
             ...parsedData,
           },
         ];
-        if (indexRef.current < order.length - 1) {
-          indexRef.current += 1;
-        } else {
-          router.push({
-            pathname: '/results',
-            params: {
-              results: JSON.stringify(updatedResults),
-            },
-          });
-        }
+        indexRef.current += 1;
   
         // Tallennetaan data jokaisen päivityksen jälkeen
         const updatedData = { ...prevData, results: updatedResults };
@@ -76,8 +76,21 @@ export default function HomeScreen() {
       console.error('Error parsing WebSocket data:', error);
     }
   };
-  
 
+  useEffect(() => {
+    if (indexRef.current === data.order?.length && data.order.length>0) {
+      router.push({
+        pathname: '/results',
+        params: {
+          results: JSON.stringify(data.results),
+          temperature: data.temperature,
+          baseHardness: data.baseHardness,
+          snowQuality: data.snowQuality,
+        },
+      });
+    }
+  }, [data.results]);
+  
   // Ladataan vanhat tulokset vain, jos parametri `loadOldResults` on true
   useEffect(() => {
     const loadData = async () => {
@@ -112,25 +125,31 @@ export default function HomeScreen() {
 
   // Järjestyksen laskeminen
   useEffect(() => {
-    const newOrder = [];
-    for (let round = 1; round <= rounds; round++) {
-      if (round % 2 !== 0) {
-        for (let i = 0; i < pairs; i++) {
-          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
-        }
-      } else {
-        for (let i = pairs - 1; i >= 0; i--) {
-          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
+    setData((prevData) => {
+      const newOrder = [];
+      for (let round = 1; round <= prevData.rounds; round++) {
+        if (round % 2 !== 0) {
+          for (let i = 0; i < prevData.pairs; i++) {
+            newOrder.push({ round, name: prevData.names[i] || `Pari ${i + 1}` });
+          }
+        } else {
+          for (let i = prevData.pairs - 1; i >= 0; i--) {
+            newOrder.push({ round, name: prevData.names[i] || `Pari ${i + 1}` });
+          }
         }
       }
-    }
-    setOrder(newOrder);
-  }, [pairs, rounds, names]);
+      // Avoid re-setting the same value to prevent unnecessary renders
+      if (JSON.stringify(newOrder) !== JSON.stringify(prevData.order)) {
+        return { ...prevData, order: newOrder };
+      }
+      return prevData; // Return the same object if order hasn't changed
+    });
+  }, [data.pairs, data.rounds, data.names]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.status}>
-        Seuraavaksi: {order[indexRef.current]?.name || 'N/A'} kierros: {order[indexRef.current]?.round || 'N/A'}
+        Seuraavaksi: {data.order[indexRef.current]?.name || 'N/A'} kierros: {data.order[indexRef.current]?.round || 'N/A'}
       </Text>
       <DataTable>
         <DataTable.Header>
