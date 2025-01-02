@@ -30,3 +30,9 @@ export const clearStorage = async () => {
     console.error('Failed to clear data:', error);
   }
 };
+
+export default {
+  saveDataToStorage,
+  loadDataFromStorage,
+  clearStorage,
+};
