@@ -72,7 +72,7 @@ export default function SettingsScreen() {
             <Text style={styles.label}>Lämpötila (°C):</Text>
             <TextInput
               style={styles.input}
-              keyboardType="numeric"
+              keyboardType="numbers-and-punctuation"
               placeholder="Esim. -5"
               value={temperature}
               onChangeText={setTemperature}
