@@ -12,7 +12,13 @@ export default function InfoModal({ visible, onClose }) {
         <View style={styles.modalContent}>
           <Text style={styles.title}>Info</Text>
           <Text style={styles.body}>
-            Ohje laitteen liittämiseen ja sovelluksen käyttöön
+            Tämä sovellus on suunniteltu suksien testaukseen. Voit määrittää 
+            suksien lukumäärän, kierrosten määrän, lämpötilan, lumen laadun ja 
+            pohjan kovuuden asetuksissa. Sovellus tallentaa mittaustulokset ja 
+            näyttää ne tulossivulla. Voit myös jakaa tulokset PDF-muodossa.
+            {"\n"}
+            Sovellus on suunniteltu käytettäväksi wifi-lähettimen ja kolmen 
+            mittauskennon kanssa.
           </Text>
           <Button title="Sulje" onPress={onClose} />
         </View>
