@@ -18,10 +18,9 @@ export default function HomeScreen() {
     rounds: rounds || 5, 
     results: [] 
   });
-
-  const [serverState, setServerState] = useState('Yhdistää...');
-
   const indexRef = useRef(0);
+
+  const [serverState, setServerState] = useState('Yhdistetään...');
   const wsRef = useRef(null);
 
   // WebSocket-yhteyden muodostaminen
@@ -31,24 +30,41 @@ export default function HomeScreen() {
     const ws = new WebSocket('ws://192.168.4.1/ws');
     wsRef.current = ws; // Tallennetaan viite WebSocket-olioon
 
-    ws.onopen = () => setServerState('Yhdistetty.');
+    ws.onopen = () => {
+      setServerState('Yhdistetty.');
+    };
+
     ws.onclose = () => {
       setServerState('Ei yhteyttä.');
       wsRef.current = null; // Nollataan viite, jos yhteys katkeaa
     };
+
     ws.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
+
     ws.onmessage = (e) => {
       const parsedData = JSON.parse(e.data);
-      if (data.order.length > 0) {
-        handleWebSocketMessage(parsedData);
-        ws.send(JSON.stringify({ id: parsedData.id }));
-      } else {
-        console.warn('Order not populated yet; message ignored.');
-      }
+      handleWebSocketMessage(parsedData);
+      ws.send(JSON.stringify({ id: parsedData.id }));
     };
   }, [data.order]);
 
+  // WebSocket-yhteyden hallinta
+  useEffect(() => {
+    console.log("#");
+    const reconnectInterval = setInterval(() => {
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        setServerState('Yhdistetään...');
+        connectWebSocket();
+      }
+    }, 200);
+    return () => clearInterval(reconnectInterval);
+  }, [connectWebSocket]);  
+
   const handleWebSocketMessage = (parsedData) => {
+    if (data.order.length == 0) {
+      console.warn('Order not populated yet; message ignored.');
+      return;
+    }
     try {
       if (parsedData.error) {
         alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
@@ -56,6 +72,7 @@ export default function HomeScreen() {
       }
 
       setData((prevData) => {
+        console.log(prevData.order);
         const updatedResults = [
           ...prevData.results,
           {
@@ -64,12 +81,14 @@ export default function HomeScreen() {
             ...parsedData,
           },
         ];
-        indexRef.current += 1;
+        
+        if (indexRef.current < data.order?.length-1 ) {
+          indexRef.current += 1;
+        }
   
         // Tallennetaan data jokaisen päivityksen jälkeen
         const updatedData = { ...prevData, results: updatedResults };
-        saveDataToStorage(updatedData);
-  
+
         return updatedData;
       });
     } catch (error) {
@@ -78,7 +97,17 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (indexRef.current === data.order?.length && data.order.length>0) {
+    // Tallennetaan tulokset laitteelle
+    if(data.order.length > 0){
+      console.log("Saving");
+      saveDataToStorage(data);
+    }else{
+      return;
+    }
+    // Jos kaikki sukset testattu siirretään tulos sivulle
+    if (indexRef.current === data.order?.length) {
+      console.log("->Results")
+      indexRef.current -= 1;
       router.push({
         pathname: '/results',
         params: {
@@ -89,9 +118,10 @@ export default function HomeScreen() {
         },
       });
     }
-  }, [data.results]);
+  }, [data]);
+
   
-  // Ladataan vanhat tulokset vain, jos parametri `loadOldResults` on true
+  // Ladataan vanhat tulokset laitteelta vain, jos parametri `loadOldResults` on true
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -111,19 +141,9 @@ export default function HomeScreen() {
     }
   }, [params?.loadOldResults]);
 
-  // WebSocket-yhteyden hallinta
-  useEffect(() => {
-    const reconnectInterval = setInterval(() => {
-      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-        setServerState('Yritetään yhdistää uudelleen...');
-        connectWebSocket();
-      }
-    }, 5000);
 
-    return () => clearInterval(reconnectInterval);
-  }, [connectWebSocket]);
-
-  // Järjestyksen laskeminen
+  // Luo halutulle suksi ja kierros määrälle testaus järjestyksen jossa joka 
+  // toinen kierros testataan päinvastaisessa järjestyksessä
   useEffect(() => {
     setData((prevData) => {
       const newOrder = [];
