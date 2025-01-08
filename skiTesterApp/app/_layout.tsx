@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stack } from "expo-router";
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, Button } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import StartScreen from './start';
@@ -46,7 +46,17 @@ export default function RootLayout() {
             ),
           }}
         />
-        <Stack.Screen name="results" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="results" 
+          options={{
+            title:"",
+            headerLeft: () => (
+              <Button
+                title="Uusi mittaus"
+                onPress={() => router.push({ pathname: '/settings'})}
+              />)
+          }} 
+        />
       </Stack>
       {/* InfoModal */}
       <InfoModal visible={isInfoVisible} onClose={closeInfoModal} />
