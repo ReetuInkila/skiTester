@@ -2,15 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Button, Platform } from 'react-native';
 import { DataTable } from 'react-native-paper';
 import { useLocalSearchParams } from 'expo-router';
+import { useSelector } from 'react-redux';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
 export default function Results() {
-  const { results, temperature, snowQuality, baseHardness } = useLocalSearchParams();
-  const parsedResults = useMemo(() => JSON.parse(results || '[]'), [results]);
+  const { data } = useSelector((state) => state.app);
 
   const calculateSkiData = () => {
-    const skis = parsedResults.reduce((acc, result) => {
+    const skis = data.results.reduce((acc, result) => {
       if (!acc[result.name]) {
         acc[result.name] = [];
       }
@@ -59,9 +59,9 @@ export default function Results() {
         <body>
           <h1>Testitulokset</h1>
           <p>Päivämäärä: ${date}</p>
-          <p>Lämpötila: ${temperature}°C</p>
-          <p>Lumi: ${snowQuality}</p>
-          <p>Pohja: ${baseHardness}</p>
+          <p>Lämpötila: ${data.temperature}°C</p>
+          <p>Lumi: ${data.snowQuality}</p>
+          <p>Pohja: ${data.baseHardness}</p>
           <table border="1" style="width: 100%; border-collapse: collapse;">
             <thead>
               <tr>
@@ -109,9 +109,9 @@ export default function Results() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text>{date}</Text>
-        <Text>Lämpötila: {temperature}°C</Text>
-        <Text>Lumi: {snowQuality}</Text>
-        <Text>Pohja: {baseHardness}</Text>
+        <Text>Lämpötila: {data.temperature}°C</Text>
+        <Text>Lumi: {data.snowQuality}</Text>
+        <Text>Pohja: {data.baseHardness}</Text>
       </View>
       
       <DataTable>

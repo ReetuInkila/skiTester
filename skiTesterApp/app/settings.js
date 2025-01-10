@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, KeyboardAvoidingView, TextInput, Button, Platform, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
+import { useDispatch} from 'react-redux';
+import { setData, setOrder, clearData } from './store';
+import { clearStorage } from './storage';
 
 export default function SettingsScreen() {
   const [pairs, setPairs] = useState(5); // Tallennetaan numeroina
@@ -10,19 +13,7 @@ export default function SettingsScreen() {
   const [snowQuality, setSnowQuality] = useState(''); // Lumen laatu
   const [baseHardness, setBaseHardness] = useState(''); // Pohjan kovuus
 
-  const handleSave = () => {
-    router.push({
-      pathname: '/home',
-      params: {
-        pairs: pairs,
-        rounds: rounds,
-        names: JSON.stringify(names),
-        temperature: temperature,
-        snowQuality: snowQuality,
-        baseHardness: baseHardness,
-      },
-    });
-  };
+  const dispatch = useDispatch();
 
   // Päivitä names-listan pituus vastaamaan pairs-muuttujaa
   useEffect(() => {
@@ -44,6 +35,42 @@ export default function SettingsScreen() {
       updatedNames[index] = value;
       return updatedNames;
     });
+  };
+
+
+  const handleSave = () => {
+    // Tallenna tiedot Redux-storeen
+    dispatch(clearData());
+
+    dispatch(
+      setData({
+        pairs,
+        rounds,
+        names,
+        temperature,
+        snowQuality,
+        baseHardness,
+      })
+    );
+
+    // Luo järjestys
+    const newOrder = [];
+    for (let round = 1; round <= rounds; round++) {
+      if (round % 2 !== 0) {
+        for (let i = 0; i < pairs; i++) {
+          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
+        }
+      } else {
+        for (let i = pairs - 1; i >= 0; i--) {
+          newOrder.push({ round, name: names[i] || `Pari ${i + 1}` });
+        }
+      }
+    }
+
+    dispatch(setOrder(newOrder));
+
+    clearStorage();
+    router.push('/home');
   };
 
   return (
