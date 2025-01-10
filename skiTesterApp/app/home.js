@@ -1,99 +1,79 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { DataTable } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { setData, addResult, setServerState} from './store';
 import { saveDataToStorage, loadDataFromStorage } from './storage';
 
 export default function HomeScreen() {
-  const params = useLocalSearchParams(); // Fetch query params
-  const { temperature, snowQuality, baseHardness, pairs, rounds, names} = params; // Destructure specific params
+  const params = useLocalSearchParams();
 
-  const [data, setData] = useState({
-    order:[],
-    names: JSON.parse(names|| '[]'),
-    temperature: temperature || 0, 
-    snowQuality: snowQuality || 'unknown', 
-    baseHardness: baseHardness || 'unknown', 
-    pairs: pairs || 5, 
-    rounds: rounds || 5, 
-    results: [] 
-  });
+  const dispatch = useDispatch();
+  const { data, serverState} = useSelector((state) => state.app);
+
+  const wsRef = useRef(null);
   const indexRef = useRef(0);
 
-  const [serverState, setServerState] = useState('Yhdistetään...');
-  const wsRef = useRef(null);
-
-  // WebSocket-yhteyden muodostaminen
   const connectWebSocket = useCallback(() => {
-    if (wsRef.current) return; // Estetään uuden WebSocket-olion luonti, jos yhteys on jo olemassa
+    if (wsRef.current) return;
 
     const ws = new WebSocket('ws://192.168.4.1/ws');
-    wsRef.current = ws; // Tallennetaan viite WebSocket-olioon
+    wsRef.current = ws;
 
     ws.onopen = () => {
-      setServerState('Yhdistetty.');
+      dispatch(setServerState('Yhdistetty.'));
     };
 
     ws.onclose = () => {
-      setServerState('Ei yhteyttä.');
-      wsRef.current = null; // Nollataan viite, jos yhteys katkeaa
+      dispatch(setServerState('Ei yhteyttä.'));
+      wsRef.current = null;
     };
 
-    ws.onerror = (e) => setServerState(`Virhe yhteydessä: ${e.message}`);
+    ws.onerror = (e) => dispatch(setServerState(`Virhe yhteydessä: ${e.message}`));
 
     ws.onmessage = (e) => {
       const parsedData = JSON.parse(e.data);
-      handleWebSocketMessage(parsedData);
       ws.send(JSON.stringify({ id: parsedData.id }));
+      handleWebSocketMessage(parsedData);
     };
-  }, [data.order]);
+  }, [dispatch]);
 
-  // WebSocket-yhteyden hallinta
   useEffect(() => {
-    console.log("#");
     const reconnectInterval = setInterval(() => {
       if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-        setServerState('Yhdistetään...');
+        dispatch(setServerState('Yhdistetään...'));
         connectWebSocket();
       }
     }, 200);
     return () => clearInterval(reconnectInterval);
-  }, [connectWebSocket]);  
+  }, [connectWebSocket, dispatch]);
 
   const handleWebSocketMessage = (parsedData) => {
-    if (data.order.length == 0) {
+    if (data.order.length === 0) {
       console.warn('Order not populated yet; message ignored.');
       return;
     }
-    try {
-      if (parsedData.error) {
-        alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
-        return;
-      }
 
-      setData((prevData) => {
-        console.log(prevData.order);
-        const updatedResults = [
-          ...prevData.results,
-          {
-            round: prevData.order[indexRef.current].round,
-            name: prevData.order[indexRef.current].name,
-            ...parsedData,
-          },
-        ];
-        
-        if (indexRef.current < data.order?.length-1 ) {
-          indexRef.current += 1;
-        }
-  
-        // Tallennetaan data jokaisen päivityksen jälkeen
-        const updatedData = { ...prevData, results: updatedResults };
-
-        return updatedData;
-      });
-    } catch (error) {
-      console.error('Error parsing WebSocket data:', error);
+    if (indexRef >= data.order.length) {
+      console.warn('Index out of bounds; message ignored.');
+      return;
     }
+
+    if (parsedData.error) {
+      alert(`Virheilmoitus laitteelta: ${parsedData.error}`);
+      return;
+    }
+
+    const newResult = {
+      round: data.order[indexRef.current].round,
+      name: data.order[indexRef.current].name,
+      ...parsedData,
+    };
+
+    dispatch(addResult(newResult));
+
+    indexRef.current += 1;
   };
 
   useEffect(() => {
@@ -106,17 +86,9 @@ export default function HomeScreen() {
     }
     // Jos kaikki sukset testattu siirretään tulos sivulle
     if (indexRef.current === data.order?.length) {
+      indexRef.current = 0;
       console.log("->Results")
-      indexRef.current -= 1;
-      router.push({
-        pathname: '/results',
-        params: {
-          results: JSON.stringify(data.results),
-          temperature: data.temperature,
-          baseHardness: data.baseHardness,
-          snowQuality: data.snowQuality,
-        },
-      });
+      router.push('/results');
     }
   }, [data]);
 
@@ -140,31 +112,6 @@ export default function HomeScreen() {
       loadData();
     }
   }, [params?.loadOldResults]);
-
-
-  // Luo halutulle suksi ja kierros määrälle testaus järjestyksen jossa joka 
-  // toinen kierros testataan päinvastaisessa järjestyksessä
-  useEffect(() => {
-    setData((prevData) => {
-      const newOrder = [];
-      for (let round = 1; round <= prevData.rounds; round++) {
-        if (round % 2 !== 0) {
-          for (let i = 0; i < prevData.pairs; i++) {
-            newOrder.push({ round, name: prevData.names[i] || `Pari ${i + 1}` });
-          }
-        } else {
-          for (let i = prevData.pairs - 1; i >= 0; i--) {
-            newOrder.push({ round, name: prevData.names[i] || `Pari ${i + 1}` });
-          }
-        }
-      }
-      // Avoid re-setting the same value to prevent unnecessary renders
-      if (JSON.stringify(newOrder) !== JSON.stringify(prevData.order)) {
-        return { ...prevData, order: newOrder };
-      }
-      return prevData; // Return the same object if order hasn't changed
-    });
-  }, [data.pairs, data.rounds, data.names]);
 
   return (
     <View style={styles.container}>

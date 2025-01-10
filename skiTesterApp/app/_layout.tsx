@@ -3,8 +3,8 @@ import { Stack } from "expo-router";
 import { TouchableOpacity, Button } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import StartScreen from './start';
-import HomeScreen from './home'
+import { Provider } from 'react-redux';
+import store from './store';
 import InfoModal from './info';
 
 export default function RootLayout() {
@@ -16,9 +16,11 @@ export default function RootLayout() {
   const closeInfoModal = () => setInfoVisible(false);
 
   return (
-    <>
+    <Provider store={store}>
       <Stack>
+
         <Stack.Screen name="index" options={{ headerShown: false }} />
+
         <Stack.Screen 
           name="start" 
           options={{
@@ -32,7 +34,9 @@ export default function RootLayout() {
             ),
           }}
         />
+
         <Stack.Screen name="settings" options={{ title: 'Asetukset' }} />
+
         <Stack.Screen
           name="home"
           options={{
@@ -46,6 +50,7 @@ export default function RootLayout() {
             ),
           }}
         />
+
         <Stack.Screen 
           name="results" 
           options={{
@@ -53,13 +58,14 @@ export default function RootLayout() {
             headerLeft: () => (
               <Button
                 title="Uusi mittaus"
-                onPress={() => router.push({ pathname: '/settings'})}
+                onPress={() => router.push({ pathname: '/start', params: { oldResults: 1 } })}
               />)
           }} 
         />
       </Stack>
+      
       {/* InfoModal */}
       <InfoModal visible={isInfoVisible} onClose={closeInfoModal} />
-    </>
+    </Provider>
   );
 }
