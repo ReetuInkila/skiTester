@@ -9,7 +9,7 @@ const char *ssid = "Ski-Tester-1";
 const char *password = "123456789";
 
 // Laitteiston määrittely
-const int buzzerPin = 12; // Summerin ohjaukseen käytettävä pinni
+const int buzzerPin = 13; // Summerin ohjaukseen käytettävä pinni
 const int sensorPin = 14; // Anturin lukemiseen käytettävä pinni
 
 // Anturien lukuarvot ja aikaleimat
