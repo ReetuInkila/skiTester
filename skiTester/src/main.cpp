@@ -13,11 +13,9 @@ const int buzzerPin = 13; // Summerin ohjaukseen käytettävä pinni
 const int sensorPin = 14; // Anturin lukemiseen käytettävä pinni
 
 // Anturien lukuarvot ja aikaleimat
-unsigned long time1 = 0;
-unsigned long time2 = 0;
-unsigned long time3 = 0;
-
-float t1 = 0, t2 = 0;
+unsigned long start_time = 0;
+unsigned long end_time = 0;
+unsigned long total = 0;
 
 // Virheilmoitusten ja viestien hallinta
 String errorMessage = ""; // Virheilmoituksen säilytys
@@ -97,7 +95,7 @@ void loop() {
     }
 
     // Lähetä tulokset WebSocket-asiakkaille
-    if (t1 != 0 && t2 != 0) {
+    if (total != 0) {
         notifyClients("");
     }
 }
@@ -105,36 +103,26 @@ void loop() {
 void readSensors() {
     int sensorValue = digitalRead(sensorPin);
     if (sensorValue == 0) {
-        time1 = millis();
-        Serial.println("Time1 recorded");
+        start_time = millis();
+        Serial.println("Measuring started");
         errorMessage = "Not all sensors read";
         buzz();
 
-        while (millis() - time1 < 20000) { // Odota 20 sekuntia
+        while (millis() - start_time < 20000) { // maksimi aika 20 sekuntia
             sensorValue = digitalRead(sensorPin);
             if (sensorValue == 0) {
-                if (time2 == 0) {
-                    time2 = millis();
-                    Serial.println("Time2 recorded");
-                    buzz();
-                } else {
-                    time3 = millis();
-                    Serial.println("Time3 recorded");
-
-                    // Laske ajat
-                    t1 = (time2 - time1) / 1000.0;
-                    t2 = (time3 - time2) / 1000.0;
+                    end_time = millis();
+                    // Laske aika
+                    total = end_time - start_time;
                     errorMessage = "";
                     buzz();
                     break;
-                }
             }
         }
 
         // Nollaa aikamuuttujat
-        time1 = 0;
-        time2 = 0;
-        time3 = 0;
+        start_time = 0;
+        end_time = 0;
         Serial.println("Run ended");
     }
 }
@@ -146,11 +134,9 @@ void notifyClients(String message) {
     if (!message.isEmpty()) {
         jsonDoc["error"] = message;
     } else {
-        jsonDoc["t1"] = t1;
-        jsonDoc["t2"] = t2;
+        jsonDoc["time"] = total/1000.0; // Aika sekunteina
 
-        t1 = 0; // Nollaa arvot lähetyksen jälkeen
-        t2 = 0;
+        total = 0; // Nollaa arvot lähetyksen jälkeen
     }
 
     jsonDoc["id"] = messageId;
