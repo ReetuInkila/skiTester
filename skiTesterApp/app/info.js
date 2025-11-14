@@ -17,7 +17,7 @@ export default function InfoModal({ visible, onClose }) {
             pohjan kovuuden asetuksissa. Sovellus tallentaa mittaustulokset ja 
             näyttää ne tulossivulla. Voit myös jakaa tulokset PDF-muodossa.
             {"\n"}
-            Sovellus on suunniteltu käytettäväksi wifi-lähettimen ja kolmen 
+            Sovellus on suunniteltu käytettäväksi wifi-lähettimen ja kahden 
             mittauskennon kanssa.
           </Text>
           <Button title="Sulje" onPress={onClose} />
