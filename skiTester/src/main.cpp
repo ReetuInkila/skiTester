@@ -180,7 +180,7 @@ void setReports(void) {
 
 // Lähettää viestin asiakkaalle ja tallentaa sen lähetettyjen listaan
 void notifyClients(String message) {
-    DynamicJsonDocument jsonDoc(1024);
+    StaticJsonDocument<256> jsonDoc;
 
     if (!message.isEmpty()) {
         jsonDoc["error"] = message;
