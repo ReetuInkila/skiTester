@@ -21,13 +21,23 @@ const int sensorPin = 22; // Anturin lukemiseen käytettävä pinni
 Adafruit_BNO08x  bno08x(BNO08X_RESET);
 sh2_SensorValue_t sensorValue;
 
-// Anturien lukuarvot ja aikaleimat
+// Magneetin havaitsemisen aikaleimat
 unsigned long start_time = 0;
 unsigned long end_time = 0;
-unsigned long total = 0;
 
-std::vector<float> mag_buf;
-float mag_avg;
+// Mittaus taajuus ja maksimi pituus ja tallennus taulukko kiihtyvyysarvoille
+const unsigned long max_measurement_time = 30; // Maksimi mittausaika s
+const unsigned long measurement_interval = 100; // Mittausväli millisekunteina hz
+static const size_t MAG_MAX = measurement_interval* max_measurement_time;
+static float mag_buf[MAG_MAX]; 
+static size_t mag_idx = 0;
+
+inline void mag_store(float v) {
+  if (mag_idx < MAG_MAX) mag_buf[mag_idx++] = v;
+}
+inline void mag_clear() {
+  mag_idx = 0;
+}
 
 
 bool measuring = false;
@@ -50,7 +60,7 @@ AsyncWebSocket ws("/ws");
 // Funktio määrittelyt
 void buzz();
 void readSensors();
-void notifyClients(String message);
+void notifyClients(float mag_avg, float total, String message="");
 void removeMessageById(unsigned long id);
 void setReports();
 void mittaa();
@@ -127,21 +137,19 @@ void setup() {
 
 void loop() {
     if (!errorMessage.isEmpty() && !measuring) {
-        notifyClients(errorMessage);
+        notifyClients(0,0,errorMessage);
         errorMessage = ""; // Tyhjennä virheilmoitus lähetyksen jälkeen
     }
 
     // Lähetä tulokset WebSocket-asiakkaille
-    if (total != 0) {
-      if (mag_buf.empty()) mag_avg = 0;
-      else {
-          float s = 0;
-          for (float v : mag_buf) s += v;
-          mag_avg = s / mag_buf.size();
-      }
-      notifyClients("");
-      mag_buf.clear();
-      total = 0;
+    if (end_time != 0) {
+      size_t n = mag_idx;
+      float sum = 0.0f;
+      for (size_t i = 0; i < n; i++) sum += mag_buf[i];
+      float mag_avg = n ? sum / n : 0.0f;
+      mag_clear();
+      notifyClients(mag_avg, (end_time - start_time)/1000.0);
+      start_time = 0, end_time = 0;
     }
 
     if (measuring && end_time == 0) {
@@ -151,41 +159,36 @@ void loop() {
               float y = sensorValue.un.linearAcceleration.y;
               float z = sensorValue.un.linearAcceleration.z;
               float m = sqrtf(x*x + y*y + z*z);
-              mag_buf.push_back(m);
+              mag_store(m);
           }
       }
     
   }
 }
 
-void mittaa() {
+void IRAM_ATTR mittaa() {
   measuring = !measuring;
-  if (measuring) {
-    start_time = millis();
-  }else {
-    end_time = millis();
-    total = end_time - start_time;
-    start_time = 0;
-    end_time = 0;
-  }
+  unsigned long t = millis();
+  if (measuring) start_time = t;
+  else end_time = t;
 }
 
 // Here is where you define the sensor outputs you want to receive
 void setReports(void) {
   Serial.println("Setting desired reports");
   if (! bno08x.enableReport(SH2_LINEAR_ACCELERATION)) {
-    Serial.println("Could not enable game vector");
+    Serial.println("Failed to enable linear acceleration report");
   }
 }
 
 // Lähettää viestin asiakkaalle ja tallentaa sen lähetettyjen listaan
-void notifyClients(String message) {
+void notifyClients(float mag_avg, float total, String message) {
     StaticJsonDocument<256> jsonDoc;
 
     if (!message.isEmpty()) {
         jsonDoc["error"] = message;
     } else {
-        jsonDoc["time"] = total/1000.0; // Aika sekunteina
+        jsonDoc["time"] = total; // Aika sekunteina
         jsonDoc["mag_avg"] = mag_avg;
     }
 
