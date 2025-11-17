@@ -21,8 +21,8 @@ Adafruit_BNO08x bno08x(BNO08X_RESET);
 sh2_SensorValue_t sensorValue;
 
 // Magneetin havaitsemisen aikaleimat
-unsigned long start_time = 0;
-unsigned long end_time = 0;
+volatile unsigned long start_time = 0;
+volatile unsigned long end_time = 0;
 
 // Mittaus taajuus ja maksimi pituus ja tallennus taulukko kiihtyvyysarvoille
 const unsigned long max_measurement_time = 30;                             // Maksimi mittausaika s
@@ -43,7 +43,7 @@ inline void mag_clear()
 }
 
 // Mittaus tilan hallinta
-bool measuring = false;
+volatile bool measuring = false;
 
 // Virheilmoitusten ja viestien hallinta
 String errorMessage = "";    // Virheilmoituksen säilytys
