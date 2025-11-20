@@ -34,8 +34,7 @@ static size_t mag_idx = 0;                                                 // In
 // Funktiot kiihtyvyys arvojen tallennukseen ja hallintaan
 inline void mag_store(float v)
 {
-  if (mag_idx < MAG_MAX)
-    if (mag_idx < MAG_MAX) mag_buf[mag_idx++] = v;
+  if (mag_idx < MAG_MAX) mag_buf[mag_idx++] = v;
 }
 inline void mag_clear()
 {
@@ -225,12 +224,14 @@ void notifyClients(float mag_avg, float total, String message)
   jsonDoc["id"] = messageId;
   String jsonResponse;
   serializeJson(jsonDoc, jsonResponse);
-
-  if (messages.size() >= MSG_LIMIT) messages.erase(messages.begin());
-  messages.push_back({messageId, jsonResponse});
-  messageId++;
   Serial.print("Sending to clients: ");
   Serial.println(jsonResponse);
+  
+  // Tallenna viesti ja rajoita tallennettujen viestien määrää
+  noInterrupts();
+  if (messages.size() >= MSG_LIMIT) messages.erase(messages.begin());
+  messages.push_back({messageId++, jsonResponse});
+  interrupts();
 
   ws.textAll(jsonResponse);
 }
