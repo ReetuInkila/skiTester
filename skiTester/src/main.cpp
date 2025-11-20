@@ -1,15 +1,12 @@
 #include <Arduino.h>
 #include "config.h"
+#include "imu_sensor.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <vector>
 #include <Adafruit_BNO08x.h>
 
-
-// BNO085 IMU sensori olio
-Adafruit_BNO08x bno08x(BNO08X_RESET);
-sh2_SensorValue_t sensorValue;
 
 // Magneetin havaitsemisen aikaleimat
 volatile unsigned long start_time = 0;
@@ -70,7 +67,7 @@ void setup()
   buzz(); // Soita merkkiääni alustuksen merkiksi
 
   // BNO08x anturin alustus SPI:llä
-  if (!bno08x.begin_SPI(BNO08X_CS, BNO08X_INT))
+  if (!imuBegin())
   {
     Serial.println("Failed to find BNO08x chip");
     while (1)
@@ -79,19 +76,6 @@ void setup()
     }
   }
   Serial.println("BNO08x Found!");
-  for (int n = 0; n < bno08x.prodIds.numEntries; n++)
-  {
-    Serial.print("Part ");
-    Serial.print(bno08x.prodIds.entry[n].swPartNumber);
-    Serial.print(": Version :");
-    Serial.print(bno08x.prodIds.entry[n].swVersionMajor);
-    Serial.print(".");
-    Serial.print(bno08x.prodIds.entry[n].swVersionMinor);
-    Serial.print(".");
-    Serial.print(bno08x.prodIds.entry[n].swVersionPatch);
-    Serial.print(" Build ");
-    Serial.println(bno08x.prodIds.entry[n].swBuildNumber);
-  }
   setReports();
 
   // Wi-Fi-yhteyden luominen
@@ -159,16 +143,10 @@ void loop()
   // Tallennetaan kiihtyvyysarvot mittauksen aikana
   if (measuring && end_time == 0)
   {
-    if (bno08x.getSensorEvent(&sensorValue))
-    {
-      if (sensorValue.sensorId == SH2_LINEAR_ACCELERATION)
-      {
-        float x = sensorValue.un.linearAcceleration.x;
-        float y = sensorValue.un.linearAcceleration.y;
-        float z = sensorValue.un.linearAcceleration.z;
-        float m = sqrtf(x * x + y * y + z * z);
-        mag_store(m);
-      }
+    float x, y, z;
+    if (getLinearAcceleration(x, y, z)) {
+      float m = sqrtf(x * x + y * y + z * z);
+      mag_store(m);
     }
   }
 }
@@ -184,15 +162,7 @@ void IRAM_ATTR mittaa()
     end_time = t;
 }
 
-// Määritä halutut raportit BNO08x anturille
-void setReports(void)
-{
-  Serial.println("Setting desired reports");
-  if (!bno08x.enableReport(SH2_LINEAR_ACCELERATION))
-  {
-    Serial.println("Failed to enable linear acceleration report");
-  }
-}
+
 
 // Lähettää viestin asiakkaalle ja tallentaa sen lähetettyjen listaan
 void notifyClients(float mag_avg, float total, String message)
