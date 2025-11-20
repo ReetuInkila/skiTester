@@ -35,7 +35,7 @@ static size_t mag_idx = 0;                                                 // In
 inline void mag_store(float v)
 {
   if (mag_idx < MAG_MAX)
-    mag_buf[mag_idx++] = v;
+    if (mag_idx < MAG_MAX) mag_buf[mag_idx++] = v;
 }
 inline void mag_clear()
 {
