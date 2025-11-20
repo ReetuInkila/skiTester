@@ -1,22 +1,13 @@
 #include <Arduino.h>
+#include "config.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <vector>
 #include <Adafruit_BNO08x.h>
 
-// Wi-Fi verkon asetukset
-const char *ssid = "Ski-Tester-1";
-const char *password = "123456789";
 
-// Pinnit summerille ja anturille
-const int buzzerPin = 13; // Summerin ohjaukseen käytettävä pinni
-const int sensorPin = 22; // Anturin lukemiseen käytettävä pinni
-
-// BNO085 IMU liitäntöjen määrittelyt ja sensori olio
-#define BNO08X_CS 25
-#define BNO08X_INT 26
-#define BNO08X_RESET 14
+// BNO085 IMU sensori olio
 Adafruit_BNO08x bno08x(BNO08X_RESET);
 sh2_SensorValue_t sensorValue;
 
@@ -25,8 +16,6 @@ volatile unsigned long start_time = 0;
 volatile unsigned long end_time = 0;
 
 // Mittaus taajuus ja maksimi pituus ja tallennus taulukko kiihtyvyysarvoille
-const unsigned long max_measurement_time = 30;                             // Maksimi mittausaika s
-const unsigned long measurement_interval = 100;                            // Mittaustaajuus hz
 static const size_t MAG_MAX = measurement_interval * max_measurement_time; // Maksimi tallennettavien arvojen määrä
 static float mag_buf[MAG_MAX];                                             // Kiihtyvyysarvojen tallennustaulukko
 static size_t mag_idx = 0;                                                 // Indeksi seuraavalle tallennettavalle arvolle
@@ -48,7 +37,6 @@ volatile bool measuring = false;
 String errorMessage = "";    // Virheilmoituksen säilytys
 unsigned long messageId = 0; // Uniikki viestin ID
 
-const size_t MSG_LIMIT = 200;
 
 // Rakenne viestien hallintaan
 struct Message
@@ -75,9 +63,9 @@ void setup()
   Serial.begin(115200);
 
   // Pinnien asetukset
-  pinMode(sensorPin, INPUT);                                          // Aseta anturipinni syötteeksi
-  pinMode(buzzerPin, OUTPUT);                                         // Aseta summeripinni ulostuloksi
-  attachInterrupt(digitalPinToInterrupt(sensorPin), mittaa, FALLING); // Liitä keskeytys anturipinniin
+  pinMode(SENSOR_PIN, INPUT);                                          // Aseta anturipinni syötteeksi
+  pinMode(BUZZER_PIN, OUTPUT);                                         // Aseta summeripinni ulostuloksi
+  attachInterrupt(digitalPinToInterrupt(SENSOR_PIN), mittaa, FALLING); // Liitä keskeytys anturipinniin
 
   buzz(); // Soita merkkiääni alustuksen merkiksi
 
@@ -257,5 +245,5 @@ void removeMessageById(unsigned long id)
 // Soittaa summeria
 void buzz()
 {
-  tone(buzzerPin, 800, 500);
+  tone(BUZZER_PIN, 800, 500);
 }
