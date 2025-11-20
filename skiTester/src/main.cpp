@@ -109,7 +109,7 @@ void setup()
 
   // Wi-Fi-yhteyden luominen
   Serial.println("Setting up Access Point...");
-  WiFi.softAP(ssid);
+  WiFi.softAP(ssid, password);
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(IP);
