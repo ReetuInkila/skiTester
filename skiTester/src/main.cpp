@@ -49,6 +49,8 @@ volatile bool measuring = false;
 String errorMessage = "";    // Virheilmoituksen säilytys
 unsigned long messageId = 0; // Uniikki viestin ID
 
+const size_t MSG_LIMIT = 200;
+
 // Rakenne viestien hallintaan
 struct Message
 {
@@ -224,6 +226,7 @@ void notifyClients(float mag_avg, float total, String message)
   String jsonResponse;
   serializeJson(jsonDoc, jsonResponse);
 
+  if (messages.size() >= MSG_LIMIT) messages.erase(messages.begin());
   messages.push_back({messageId, jsonResponse});
   messageId++;
   Serial.print("Sending to clients: ");
