@@ -134,7 +134,7 @@ void setup()
         Serial.print("Received from client: ");
         Serial.println(receivedMessage);
 
-        DynamicJsonDocument doc(1024);
+        StaticJsonDocument<256> doc;
         DeserializationError error = deserializeJson(doc, receivedMessage);
         if (!error && doc.containsKey("id")) {
           unsigned long id = doc["id"].as<unsigned long>();
