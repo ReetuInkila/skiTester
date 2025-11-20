@@ -2,8 +2,8 @@
 #define CONFIG_H
 
 // Wi-Fi verkon asetukset
-extern const char *ssid = "Ski-Tester-1";
-extern const char *password = "123456789";
+extern const char *ssid;
+extern const char *password;
 
 // Pinnit summerille ja anturille
 #define BUZZER_PIN 13
