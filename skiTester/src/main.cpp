@@ -1,11 +1,8 @@
 #include <Arduino.h>
 #include "config.h"
 #include "imu_sensor.h"
+#include "websocket_server.h"
 #include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include <ArduinoJson.h>
-#include <vector>
-#include <Adafruit_BNO08x.h>
 
 
 // Magneetin havaitsemisen aikaleimat
@@ -30,28 +27,8 @@ inline void mag_clear()
 // Mittaus tilan hallinta
 volatile bool measuring = false;
 
-// Virheilmoitusten ja viestien hallinta
-String errorMessage = "";    // Virheilmoituksen säilytys
-unsigned long messageId = 0; // Uniikki viestin ID
-
-
-// Rakenne viestien hallintaan
-struct Message
-{
-  unsigned long id;
-  String content;
-};
-std::vector<Message> messages;
-
-// Web-palvelimen ja WebSocketin alustaminen
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
-
 // Funktioiden esikuvat
 void buzz();
-void notifyClients(float mag_avg, float total, String message = "");
-void removeMessageById(unsigned long id);
-void setReports();
 void mittaa();
 
 void setup()
@@ -85,38 +62,7 @@ void setup()
   Serial.print("AP IP address: ");
   Serial.println(IP);
 
-  // WebSocket-tapahtumakäsittelijät
-  ws.onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len){
-    // Käsittele yhteyden muodostus, katkaisu ja saapuvat viestit
-    if (type == WS_EVT_CONNECT) {
-      Serial.println("WebSocket client connected");
-      // Lähetä kaikki tallennetut viestit uudelle asiakkaalle
-      for (const auto &message : messages) {
-        client->text(message.content);
-      }
-    } else if (type == WS_EVT_DISCONNECT) {
-      Serial.println("WebSocket client disconnected");
-    } else if (type == WS_EVT_DATA) {
-      AwsFrameInfo *info = (AwsFrameInfo *)arg;
-      if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-        data[len] = '\0'; // Null-terminointi
-        String receivedMessage = String((char *)data);
-
-        Serial.print("Received from client: ");
-        Serial.println(receivedMessage);
-
-        StaticJsonDocument<256> doc;
-        DeserializationError error = deserializeJson(doc, receivedMessage);
-        if (!error && doc.containsKey("id")) {
-          unsigned long id = doc["id"].as<unsigned long>();
-          removeMessageById(id);
-        }
-      }
-    } });
-
-  // Lisää WebSocket palvelimeen ja käynnistä palvelin
-  server.addHandler(&ws);
-  server.begin();
+  initWebSocket();
 }
 
 void loop()
@@ -160,56 +106,6 @@ void IRAM_ATTR mittaa()
     start_time = t;
   else
     end_time = t;
-}
-
-
-
-// Lähettää viestin asiakkaalle ja tallentaa sen lähetettyjen listaan
-void notifyClients(float mag_avg, float total, String message)
-{
-  StaticJsonDocument<256> jsonDoc;
-
-  if (!message.isEmpty())
-  {
-    jsonDoc["error"] = message;
-  }
-  else
-  {
-    jsonDoc["time"] = total; // Aika sekunteina
-    jsonDoc["mag_avg"] = mag_avg;
-  }
-
-  jsonDoc["id"] = messageId;
-  String jsonResponse;
-  serializeJson(jsonDoc, jsonResponse);
-  Serial.print("Sending to clients: ");
-  Serial.println(jsonResponse);
-  
-  // Tallenna viesti ja rajoita tallennettujen viestien määrää
-  noInterrupts();
-  if (messages.size() >= MSG_LIMIT) messages.erase(messages.begin());
-  messages.push_back({messageId++, jsonResponse});
-  interrupts();
-
-  ws.textAll(jsonResponse);
-}
-
-// Poistaa tietorakenteesta viestin halutulla id:llä
-void removeMessageById(unsigned long id)
-{
-  // Etsi viesti id:llä ja poista se
-  auto it = std::find_if(messages.begin(), messages.end(), [id](const Message &msg){ return msg.id == id; });
-
-  // Poista viesti, jos se löytyy. Muuten tulosta virheilmoitus.
-  if (it != messages.end()){
-    messages.erase(it);
-    Serial.print("Removed message with ID: ");
-    Serial.println(id);
-  }
-  else{
-    Serial.print("Message with ID not found: ");
-    Serial.println(id);
-  }
 }
 
 // Soittaa summeria
