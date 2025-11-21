@@ -122,9 +122,7 @@ export default function HomeScreen() {
         <DataTable.Header>
           <DataTable.Title>Pari</DataTable.Title>
           <DataTable.Title>Kierros</DataTable.Title>
-          <DataTable.Title>T1</DataTable.Title>
-          <DataTable.Title>T2</DataTable.Title>
-          <DataTable.Title>Tot</DataTable.Title>
+          <DataTable.Title>Time</DataTable.Title>
         </DataTable.Header>
       </DataTable>
       <ScrollView style={styles.scrollView}>
@@ -133,11 +131,7 @@ export default function HomeScreen() {
             <DataTable.Row key={index}>
               <DataTable.Cell>{result.name}</DataTable.Cell>
               <DataTable.Cell>{result.round}</DataTable.Cell>
-              <DataTable.Cell>{result.t1.toFixed(3)}</DataTable.Cell>
-              <DataTable.Cell>{result.t2.toFixed(3)}</DataTable.Cell>
-              <DataTable.Cell>
-                {(Number(result.t1) + Number(result.t2)).toFixed(3) || 0}
-              </DataTable.Cell>
+              <DataTable.Cell>{result.time.toFixed(3)}</DataTable.Cell>
             </DataTable.Row>
           ))}
         </DataTable>
