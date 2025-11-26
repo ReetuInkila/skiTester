@@ -76,5 +76,12 @@ void initWebSocket() {
     });
 
     server.addHandler(&ws);
+    server.on("/clear", HTTP_POST, [](AsyncWebServerRequest *req) {
+        noInterrupts();
+        messages.clear();
+        interrupts();
+        messageId = 0;
+        req->send(200, "text/plain", "OK");
+    });
     server.begin();
 }
