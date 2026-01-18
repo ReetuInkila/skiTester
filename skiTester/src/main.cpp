@@ -8,6 +8,7 @@
 // Magneetin havaitsemisen aikaleimat
 volatile unsigned long start_time = 0;
 volatile unsigned long end_time = 0;
+volatile unsigned long last_measurement_time = 0;
 
 // Mittaus taajuus ja maksimi pituus ja tallennus taulukko kiihtyvyysarvoille
 static const size_t MAG_MAX = measurement_interval * max_measurement_time; // Maksimi tallennettavien arvojen määrä
@@ -100,12 +101,14 @@ void loop()
 // Keskeytyskäsittelijä mittauksen aloittamiseen ja lopettamiseen
 void IRAM_ATTR mittaa()
 {
-  measuring = !measuring;
   unsigned long t = millis();
-  if (measuring)
-    start_time = t;
-  else
-    end_time = t;
+  if (t-last_measurement_time > 1000){
+    measuring = !measuring;
+    last_measurement_time = t;
+    if (measuring) start_time = t;
+    else end_time = t;
+  }
+  
 }
 
 // Soittaa summeria
