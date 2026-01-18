@@ -122,7 +122,8 @@ export default function HomeScreen() {
         <DataTable.Header>
           <DataTable.Title>Pari</DataTable.Title>
           <DataTable.Title>Kierros</DataTable.Title>
-          <DataTable.Title>Time</DataTable.Title>
+          <DataTable.Title>Kiihtyvyys</DataTable.Title>
+          <DataTable.Title>Aika</DataTable.Title>
         </DataTable.Header>
       </DataTable>
       <ScrollView style={styles.scrollView}>
@@ -131,6 +132,7 @@ export default function HomeScreen() {
             <DataTable.Row key={index}>
               <DataTable.Cell>{result.name}</DataTable.Cell>
               <DataTable.Cell>{result.round}</DataTable.Cell>
+              <DataTable.Cell>{result.mag_avg.toFixed(3)}</DataTable.Cell>
               <DataTable.Cell>{result.time.toFixed(3)}</DataTable.Cell>
             </DataTable.Row>
           ))}

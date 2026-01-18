@@ -21,9 +21,11 @@ export default function Results() {
     const skiData = Object.keys(skis).map((name) => {
       const skiResults = skis[name];
 
-      const averageTimes = skiResults.reduce((sum, result) => sum + result.time, 0) / skiResults.length;
+      const averageTime = skiResults.reduce((sum, r) => sum + r.time, 0) / skiResults.length;
 
-      return { name, skiResults, averageTimes };
+      const averageMag = skiResults.reduce((sum, r) => sum + r.mag_avg, 0) / skiResults.length;
+
+      return { name, skiResults, averageTime, averageMag };
     });
 
     return skiData;
@@ -65,7 +67,7 @@ export default function Results() {
               <tr>
                 <th>Nimi</th>
                 <th>Aika</th>
-                <th>Yhteensä</th>
+                <th>Kiihtyvyys</th>
               </tr>
             </thead>
             <tbody>
@@ -74,7 +76,8 @@ export default function Results() {
                   (ski) => `
                     <tr>
                       <td>${ski.name}</td>
-                      <td>${ski.averageTime.toFixed(2)}</td>
+                      <td>${ski.averageTime.toFixed(2)}</td>'
+                      <td>${ski.averageMag.toFixed(3)}</td>
                     </tr>
                   `
                 )
@@ -113,6 +116,7 @@ export default function Results() {
         <DataTable.Header>
           <DataTable.Title onPress={() => sortData('name')}>Nimi</DataTable.Title>
           <DataTable.Title onPress={() => sortData('averageTime')}>Aika</DataTable.Title>
+          <DataTable.Title onPress={() => sortData('averageMag')}>Kiihtyvyys</DataTable.Title>
         </DataTable.Header>
       </DataTable>
       <ScrollView style={styles.scrollView}>
@@ -122,7 +126,8 @@ export default function Results() {
               <TouchableOpacity onPress={() => toggleRow(ski.name)}>
                 <DataTable.Row>
                   <DataTable.Cell>{ski.name}</DataTable.Cell>
-                  <DataTable.Cell>{ski.averageTime.toFixed(2)}</DataTable.Cell>
+                  <DataTable.Cell>{ski.averageTime.toFixed(3)}</DataTable.Cell>
+                  <DataTable.Cell>{ski.averageMag.toFixed(3)}</DataTable.Cell>
                 </DataTable.Row>
               </TouchableOpacity>
 
@@ -130,7 +135,8 @@ export default function Results() {
                 ski.skiResults.map((result, nestedIndex) => (
                   <DataTable.Row key={`nested-${nestedIndex}`} style={styles.nestedRow}>
                     <DataTable.Cell>{`Kierros ${result.round}`}</DataTable.Cell>
-                    <DataTable.Cell>{result.time.toFixed(2)}</DataTable.Cell>
+                    <DataTable.Cell>{result.time.toFixed(3)}</DataTable.Cell>
+                    <DataTable.Cell>{result.mag_avg.toFixed(3)}</DataTable.Cell>
                   </DataTable.Row>
                 ))}
             </React.Fragment>
