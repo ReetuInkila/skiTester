@@ -143,6 +143,8 @@ struct MeasurementView: View {
         DispatchQueue.main.async {
             store.state.results.append(result)
             index += 1
+            
+            Storage.save(store.state)
 
             if index == store.state.order.count {
                 index = 0

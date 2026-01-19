@@ -31,6 +31,15 @@ struct SkiTesterAppApp: App {
         WindowGroup {
             NavigationStack {
                 rootView
+                    .toolbar {
+                        if store.state.navigation != .start {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button("Alkuun") {
+                                    store.state.navigation = .start
+                                }
+                            }
+                        }
+                    }
             }
             .environmentObject(store)
             .preferredColorScheme(.light)

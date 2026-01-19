@@ -11,7 +11,9 @@ struct StartView: View {
     @Binding var isInfoVisible: Bool
     @EnvironmentObject var store: AppStore
 
-    let oldResults = false
+    var oldResults: Bool {
+            !store.state.results.isEmpty
+    }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -31,7 +33,7 @@ struct StartView: View {
             if oldResults {
                 Button {
                     store.state.loadOldResults = true
-                    store.state.navigation = .settings
+                    store.state.navigation = .measure
                 } label: {
                     Text("Jatka edellistä")
                 }
