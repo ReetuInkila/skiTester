@@ -84,6 +84,7 @@ struct SettingsView: View {
         )
 
         store.state.order = buildOrder()
+        store.state.results = []
         store.state.navigation = .measure
     }
 

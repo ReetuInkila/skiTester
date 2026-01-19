@@ -7,14 +7,14 @@ import Foundation
 //  Created by Reetu Inkilä on 12.1.2026.
 //
 
-enum Route {
+enum Route: Codable {
     case start
     case settings
     case measure
     case results
 }
 
-struct AppState {
+struct AppState: Codable {
     var navigation: Route = .start
     var loadOldResults: Bool = false
     var order: [OrderItem] = []
@@ -22,19 +22,19 @@ struct AppState {
     var settings: SettingsData? = nil
 }
 
-struct OrderItem {
+struct OrderItem: Codable {
     let name: String
     let round: Int
 }
 
-struct ResultModel {
+struct ResultModel: Codable {
     let name: String
     let round: Int
     let mag_avg: Double
     let time: Double
 }
 
-struct SettingsData {
+struct SettingsData: Codable {
     let pairs: Int
     let rounds: Int
     let names: [String]
