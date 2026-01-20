@@ -24,22 +24,38 @@ struct SettingsView: View {
 
                 // Vasen sarake
                 VStack(alignment: .leading, spacing: 10) {
-                    labeledField(
-                        title: "Suksien lukumäärä",
-                        value: $pairs,
-                        onChange: updateNames
-                    )
+                    VStack(alignment: .leading) {
+                        Text("Suksien lukumäärä")
+                        TextField("", value: $pairs, format: .number)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: pairs) { newValue in
+                                updateNames(newValue)
+                            }
+                    }
 
-                    labeledField(
-                        title: "Kierrosten lukumäärä",
-                        value: $rounds
-                    )
-                    labeledField(
-                        title: "Lämpötila (°C)",
-                        value: $temperature
-                    )
-                    textField("Lumen laatu", text: $snowQuality)
-                    textField("Pohjan kovuus", text: $baseHardness)
+                    VStack(alignment: .leading) {
+                        Text("Kierrosten lukumäärä")
+                        TextField("", value: $rounds, format: .number)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    VStack(alignment: .leading) {
+                        Text("Lämpötila (°C)")
+                        TextField("", value: $temperature, format: .number)
+                            .keyboardType(.numbersAndPunctuation)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    VStack(alignment: .leading) {
+                        Text("Lumen laatu")
+                        TextField("", text: $snowQuality)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    VStack(alignment: .leading) {
+                        Text("Pohjan kovuus")
+                        TextField("", text: $baseHardness)
+                            .textFieldStyle(.roundedBorder)
+                    }
                 }
 
                 // Oikea sarake
@@ -49,6 +65,15 @@ struct SettingsView: View {
 
                     ForEach(names.indices, id: \.self) { index in
                         TextField("Pari \(index + 1)", text: $names[index])
+                            .keyboardType(.numberPad)
+                            .onChange(of: names[index]) { newValue in
+                                // Strip non-digits
+                                let filtered = newValue.filter { $0.isNumber }
+                                // Remove leading zeros
+                                let noLeadingZeros = filtered.drop { $0 == "0" }
+                                let sanitized = noLeadingZeros.isEmpty ? "" : String(noLeadingZeros)
+                                names[index] = sanitized
+                            }
                             .textFieldStyle(.roundedBorder)
                     }
                 }
@@ -74,6 +99,8 @@ struct SettingsView: View {
     }
 
     private func saveAndContinue() {
+        store.state.results = []
+
         store.state.settings = SettingsData(
             pairs: pairs,
             rounds: rounds,
@@ -84,7 +111,6 @@ struct SettingsView: View {
         )
 
         store.state.order = buildOrder()
-        store.state.results = []
         store.state.navigation = .measure
     }
 
@@ -97,9 +123,16 @@ struct SettingsView: View {
                 : Array(names.indices)
 
             for i in sequence {
+                let nameString = names[i]
+                let displayName: String
+                if let n = Int(nameString), n > 0 {
+                    displayName = String(n)
+                } else {
+                    displayName = "Pari \(i + 1)"
+                }
                 result.append(
                     OrderItem(
-                        name: names[i].isEmpty ? "Pari \(i + 1)" : names[i],
+                        name: displayName,
                         round: round
                     )
                 )
@@ -108,29 +141,5 @@ struct SettingsView: View {
         return result
     }
 
-
-    private func labeledField(
-        title: String,
-        value: Binding<Int>,
-        onChange: ((Int) -> Void)? = nil
-    ) -> some View {
-        VStack(alignment: .leading) {
-            Text(title)
-            TextField("", value: value, format: .number)
-                .keyboardType(.numberPad)
-                .textFieldStyle(.roundedBorder)
-                .onChange(of: value.wrappedValue) { newValue in
-                    onChange?(newValue)
-                }
-        }
-    }
-
-    private func textField(_ title: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading) {
-            Text(title)
-            TextField("", text: text)
-                .textFieldStyle(.roundedBorder)
-        }
-    }
 }
 
