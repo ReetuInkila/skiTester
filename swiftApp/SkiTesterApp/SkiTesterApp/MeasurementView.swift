@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+import UIKit
+
 struct MeasurementView: View {
     @EnvironmentObject var store: AppStore
 
@@ -14,6 +16,7 @@ struct MeasurementView: View {
     @State private var socket: URLSessionWebSocketTask?
     @State private var index: Int = 0
     
+    let generator = UINotificationFeedbackGenerator()
     
     var body: some View {
         VStack {
@@ -64,6 +67,7 @@ struct MeasurementView: View {
         .onAppear {
             connect()
             UIApplication.shared.isIdleTimerDisabled = true
+            generator.prepare()
         }
         .onDisappear {
             socket?.cancel()
@@ -128,11 +132,14 @@ struct MeasurementView: View {
 
             case .idle:
                 serverState = "Valmiustila"
+                generator.notificationOccurred(.warning)
 
             case .start:
                 serverState = "Mittaus käynnissä"
+                generator.notificationOccurred(.error)
 
             case .result:
+                generator.notificationOccurred(.error)
                 guard index < store.state.order.count else { return }
 
                 let orderItem = store.state.order[index]
@@ -161,10 +168,12 @@ struct MeasurementView: View {
             case .error:
                 let msg = json["message"] as? String ?? "Tuntematon virhe"
                 serverState = "Virhe: \(msg)"
+                generator.notificationOccurred(.error)
 
             case .imuStatus:
                 let cal = json["imu_cal"] as? Int ?? 0
                 serverState = "IMU kalibraatio: \(cal)"
+                generator.notificationOccurred(.warning)
             }
         }
     }
