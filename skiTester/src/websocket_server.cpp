@@ -10,29 +10,36 @@ std::vector<Message> messages;
 String errorMessage = "";
 unsigned long messageId = 0;
 
-void notifyClients(float mag_avg, float total, String message) {
-    StaticJsonDocument<256> jsonDoc;
 
-    if (!message.isEmpty()) {
-        jsonDoc["error"] = message;
-    } else {
-        jsonDoc["time"] = total;
-        jsonDoc["mag_avg"] = mag_avg;
+void notifyClients(StatusCode status,
+                   float mag_avg,
+                   float total,
+                   const String &message)
+{
+    StaticJsonDocument<256> doc;
+
+    doc["id"] = messageId;
+    doc["status"] = status;
+
+    if (status == STATUS_RESULT) {
+        doc["time"] = total;
+        doc["mag_avg"] = mag_avg;
     }
 
-    jsonDoc["id"] = messageId;
-    String jsonResponse;
-    serializeJson(jsonDoc, jsonResponse);
+    if (status == STATUS_ERROR || !message.isEmpty()) {
+        doc["message"] = message;
+    }
 
-    Serial.print("Sending to clients: ");
-    Serial.println(jsonResponse);
+    String json;
+    serializeJson(doc, json);
 
     noInterrupts();
-    if (messages.size() >= MSG_LIMIT) messages.erase(messages.begin());
-    messages.push_back({messageId++, jsonResponse});
+    if (messages.size() >= MSG_LIMIT)
+        messages.erase(messages.begin());
+    messages.push_back({messageId++, json});
     interrupts();
 
-    ws.textAll(jsonResponse);
+    ws.textAll(json);
 }
 
 void removeMessageById(unsigned long id) {
