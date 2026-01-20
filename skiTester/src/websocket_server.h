@@ -17,8 +17,20 @@ extern std::vector<Message> messages;
 extern String errorMessage;
 extern unsigned long messageId;
 
-void notifyClients(float mag_avg, float total, String message = "");
-void removeMessageById(unsigned long id);
+enum StatusCode : uint8_t {
+    STATUS_IDLE       = 0,
+    STATUS_START      = 1,
+    STATUS_RESULT     = 2,
+    STATUS_ERROR      = 3,
+    STATUS_IMU_STATUS = 4
+};
+
+void notifyClients(StatusCode status,
+                   float mag_avg = 0.0f,
+                   float total = 0.0f,
+                   const String &message = "");
+
+                   void removeMessageById(unsigned long id);
 void initWebSocket();
 
 #endif

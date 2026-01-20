@@ -110,46 +110,63 @@ struct MeasurementView: View {
         guard
             let data = text.data(using: .utf8),
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            index < store.state.order.count
+            let statusRaw = json["status"] as? Int,
+            let status = StatusCode(rawValue: statusRaw)
         else { return }
-        
-        // Lähetä kuittaus heti
+
+        // ACK
         if let id = json["id"] {
             let ack: [String: Any] = ["id": id]
-            if let ackData = try? JSONSerialization.data(withJSONObject: ack) {
-                let ackString = String(data: ackData, encoding: .utf8) ?? ""
-                socket?.send(.string(ackString)) { error in
-                    if let e = error {
-                        print("Kuittauksen lähetys epäonnistui: \(e)")
-                    }
-                }
+            if let ackData = try? JSONSerialization.data(withJSONObject: ack),
+               let ackString = String(data: ackData, encoding: .utf8) {
+                socket?.send(.string(ackString)) { _ in }
             }
         }
 
-        if let error = json["error"] as? String {
-            serverState = "Virhe: \(error)"
-            return
-        }
-
-        let orderItem = store.state.order[index]
-
-        let result = ResultModel(
-            name: orderItem.name,
-            round: orderItem.round,
-            mag_avg: json["mag_avg"] as? Double ?? 0,
-            time: json["time"] as? Double ?? 0
-        )
-
         DispatchQueue.main.async {
-            store.state.results.append(result)
-            index += 1
-            
-            Storage.save(store.state)
+            switch status {
 
-            if index == store.state.order.count {
-                index = 0
-                store.state.navigation = .results
+            case .idle:
+                serverState = "Valmiustila"
+
+            case .start:
+                serverState = "Mittaus käynnissä"
+
+            case .result:
+                guard index < store.state.order.count else { return }
+
+                let orderItem = store.state.order[index]
+
+                let mag = json["mag_avg"] as? Double ?? 0
+                let time = json["time"] as? Double ?? 0
+
+                let result = ResultModel(
+                    name: orderItem.name,
+                    round: orderItem.round,
+                    mag_avg: mag,
+                    time: time
+                )
+
+                store.state.results.append(result)
+                index += 1
+                Storage.save(store.state)
+
+                serverState = "Mittaus valmis"
+
+                if index == store.state.order.count {
+                    index = 0
+                    store.state.navigation = .results
+                }
+
+            case .error:
+                let msg = json["message"] as? String ?? "Tuntematon virhe"
+                serverState = "Virhe: \(msg)"
+
+            case .imuStatus:
+                let cal = json["imu_cal"] as? Int ?? 0
+                serverState = "IMU kalibraatio: \(cal)"
             }
         }
     }
+
 }

@@ -14,6 +14,14 @@ enum Route: Codable {
     case results
 }
 
+enum StatusCode: Int {
+    case idle       = 0
+    case start      = 1
+    case result     = 2
+    case error      = 3
+    case imuStatus  = 4
+}
+
 struct AppState: Codable {
     var navigation: Route = .start
     var loadOldResults: Bool = false
