@@ -22,9 +22,12 @@ struct MeasurementView: View {
         VStack {
 
             // Status
-            Text(
-                "Seuraavaksi: \(currentOrder?.name ?? "N/A") kierros: \(currentOrder?.round ?? 0)"
-            )
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Seuraavaksi: \(currentOrder?.name ?? "N/A") kierros: \(currentOrder?.round ?? 0)")
+                Text("Kierros \(currentRoundIndex) / \(totalRounds)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
             .font(.headline)
             .padding()
 
@@ -81,6 +84,9 @@ struct MeasurementView: View {
         guard index < store.state.order.count else { return nil }
         return store.state.order[index]
     }
+    
+    private var totalRounds: Int { store.state.order.count }
+    private var currentRoundIndex: Int { min(index + 1, max(totalRounds, 1)) }
 
     private func connect() {
         guard socket == nil else { return }
