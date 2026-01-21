@@ -1,14 +1,15 @@
 #include <Arduino.h>
 #include "config.h"
 #include "imu_sensor.h"
-#include "websocket_server.h"
-#include <WiFi.h>
+#include "ble_server.h"
 
 // Magneetin havaitsemisen aikaleimat
 volatile unsigned long start_time = 0;
 volatile unsigned long end_time = 0;
 volatile unsigned long last_measurement_time = 0;
 static const unsigned long MEASUREMENT_TIMEOUT_MS = 30000;
+
+String errorMessage = "";
 
 // Mittaus taajuus ja maksimi pituus ja tallennus taulukko kiihtyvyysarvoille
 static const size_t MAG_MAX = measurement_interval * max_measurement_time; // Maksimi tallennettavien arvojen määrä
@@ -57,14 +58,7 @@ void setup()
   Serial.println("BNO08x Found!");
   setReports();
 
-  // Wi-Fi-yhteyden luominen
-  Serial.println("Setting up Access Point...");
-  WiFi.softAP(ssid, password);
-  IPAddress IP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(IP);
-
-  initWebSocket();
+  initBLE();
 }
 
 void loop()
@@ -73,6 +67,7 @@ void loop()
     if (start_event)
     {
         notifyClients(STATUS_START, 0, 0, "Measurement started");
+        Serial.println("Measurement started");
         start_event = false;
     }
 
