@@ -74,8 +74,13 @@ struct ResultsView: View {
                     }
                 }
 
-                Button("Jaa PDF") {
-                    generatePDF()
+                VStack(spacing: 12) {
+                    Button("Jaa PDF") {
+                        generatePDF()
+                    }
+                    Button("Jaa CSV") {
+                        generateCSV()
+                    }
                 }
                 .padding()
             }
@@ -157,5 +162,46 @@ struct ResultsView: View {
         </body>
         </html>
         """
+    }
+
+    private func generateCSV() {
+        func escapeCSVField(_ field: String) -> String {
+            let escaped = field.replacingOccurrences(of: "\"", with: "\"\"")
+            return "\"\(escaped)\""
+        }
+
+        let temperature = store.state.settings?.temperature ?? 0
+        let snowQuality = store.state.settings?.snowQuality ?? "-"
+        let baseHardness = store.state.settings?.baseHardness ?? "-"
+
+        var csv = ""
+        csv += "\"Nimi\",\"Kierros\",\"Aika\",\"Kiihtyvyys\",\"Päivämäärä\",\"Lämpötila\",\"Lumi\",\"Pohja\"\n"
+
+        for r in store.state.results {
+            let name = escapeCSVField(r.name)
+            let round = escapeCSVField(String(r.round))
+            let time = escapeCSVField(String(format: "%.3f", r.time))
+            let mag = escapeCSVField(String(format: "%.3f", r.mag_avg))
+            let date = escapeCSVField(dateString)
+            let temp = escapeCSVField(String(temperature))
+            let snow = escapeCSVField(snowQuality)
+            let base = escapeCSVField(baseHardness)
+
+            csv += "\(name),\(round),\(time),\(mag),\(date),\(temp),\(snow),\(base)\n"
+        }
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("results.csv")
+        do {
+            try csv.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            return
+        }
+
+        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let root = window.rootViewController {
+            root.present(vc, animated: true)
+        }
     }
 }
