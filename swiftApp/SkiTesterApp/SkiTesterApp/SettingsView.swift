@@ -17,6 +17,8 @@ struct SettingsView: View {
     @State private var temperature: Int = 0
     @State private var snowQuality: String = ""
     @State private var baseHardness: String = ""
+    @State private var isShowingScanner = false
+    @State private var scanErrorMessage: String? = nil
 
     var body: some View {
         ScrollView {
@@ -24,6 +26,7 @@ struct SettingsView: View {
 
                 // Vasen sarake
                 VStack(alignment: .leading, spacing: 10) {
+
                     VStack(alignment: .leading) {
                         Text("Suksien lukumäärä")
                         TextField("", value: $pairs, format: .number)
@@ -79,13 +82,35 @@ struct SettingsView: View {
                 }
             }
             .padding()
-
-            Button("Aloita mittaus") {
-                saveAndContinue()
-            }
-            .padding()
         }
         .background(Color.white)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    isShowingScanner = true
+                } label: {
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: 22))
+                }
+                .accessibilityLabel("Skannaa QR-koodi")
+            }
+        }
+        .sheet(isPresented: $isShowingScanner) {
+            QRScannerView { result in
+                switch result {
+                case .success(let payload):
+                    handleScannedPayload(payload)
+                case .failure(let error):
+                    scanErrorMessage = error.localizedDescription
+                }
+                isShowingScanner = false
+            }
+        }
+        .alert("QR-virhe", isPresented: .constant(scanErrorMessage != nil), actions: {
+            Button("OK") { scanErrorMessage = nil }
+        }, message: {
+            Text(scanErrorMessage ?? "Tuntematon virhe")
+        })
     }
 
     // MARK: - Helpers
@@ -139,6 +164,58 @@ struct SettingsView: View {
             }
         }
         return result
+    }
+
+    private func handleScannedPayload(_ payload: String) {
+        if let parsed = parseSkisJSON(from: payload) {
+            // Sanitize names like UI (digits only, no leading zeros, positive)
+            let sanitized = parsed.names.map { raw -> String in
+                let filtered = raw.filter { $0.isNumber }
+                let noLeadingZeros = filtered.drop { $0 == "0" }
+                let value = noLeadingZeros.isEmpty ? "" : String(noLeadingZeros)
+                if let n = Int(value), n > 0 { return String(n) }
+                return ""
+            }.filter { !$0.isEmpty }
+            guard !sanitized.isEmpty else { return }
+            pairs = min(parsed.count, sanitized.count)
+            updateNames(pairs)
+            names = Array(sanitized.prefix(pairs))
+            return
+        }
+
+        // Fallback to legacy loose number parsing
+        let skis = parseSkis(from: payload)
+        guard !skis.isEmpty else { return }
+        pairs = skis.count
+        updateNames(pairs)
+        names = skis
+    }
+
+    // Accepts formats like "12, 34,56" or "[12,34,56]" or "12 34 56" or newline-separated. Non-digits are treated as separators.
+    private func parseSkis(from payload: String) -> [String] {
+        // Replace any non-digit with a space, then split
+        let cleaned = payload.map { $0.isNumber ? $0 : " " }
+        let parts = String(cleaned).split{ $0 == " " }
+        // Remove leading zeros and empty parts, keep only positive integers
+        let normalized: [String] = parts.compactMap { part in
+            let noLeadingZeros = part.drop { $0 == "0" }
+            let s = noLeadingZeros.isEmpty ? (part.contains("0") ? "0" : "") : String(noLeadingZeros)
+            guard let n = Int(s), n > 0 else { return nil }
+            return String(n)
+        }
+        return normalized
+    }
+
+    private func parseSkisJSON(from payload: String) -> (count: Int, names: [String])? {
+        struct QRSkis: Decodable { let count: Int; let names: [String] }
+        guard let data = payload.data(using: .utf8) else { return nil }
+        do {
+            let decoded = try JSONDecoder().decode(QRSkis.self, from: data)
+            guard decoded.count > 0, !decoded.names.isEmpty else { return nil }
+            return (decoded.count, decoded.names)
+        } catch {
+            return nil
+        }
     }
 
 }
