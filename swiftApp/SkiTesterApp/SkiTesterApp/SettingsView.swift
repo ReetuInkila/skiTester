@@ -20,6 +20,14 @@ struct SettingsView: View {
     @State private var isShowingScanner = false
     @State private var scanErrorMessage: String? = nil
 
+    private var canStartMeasurement: Bool {
+        // All names must be non-empty and represent a positive integer
+        !names.isEmpty && names.allSatisfy { name in
+            if let n = Int(name), n > 0 { return true }
+            return false
+        }
+    }
+
     var body: some View {
         ScrollView {
             HStack(alignment: .top, spacing: 20) {
@@ -81,6 +89,12 @@ struct SettingsView: View {
                     }
                 }
             }
+            Button("Aloita mittaus") {
+                saveAndContinue()
+            }
+            .padding(.top, 16)
+            .disabled(!canStartMeasurement)
+            .opacity(canStartMeasurement ? 1 : 0.5)
             .padding()
         }
         .background(Color.white)
