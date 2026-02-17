@@ -12,7 +12,7 @@ struct StartView: View {
     @EnvironmentObject var store: AppStore
 
     var oldResults: Bool {
-            !store.state.results.isEmpty
+            !store.state.order.isEmpty
     }
 
     var body: some View {
