@@ -1,10 +1,14 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// Wi-Fi verkon asetukset
-extern const char *ssid;
-extern const char *password;
+#include <Arduino.h>
+#include "config.h"
 
+enum StatusCode : uint8_t {
+  STATUS_START  = 1,
+  STATUS_RESULT = 2,
+  STATUS_ERROR  = 3
+};
 // Pinnit summerille ja anturille
 #define BUZZER_PIN 13
 #define SENSOR_PIN 22

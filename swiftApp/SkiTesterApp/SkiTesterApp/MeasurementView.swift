@@ -9,19 +9,28 @@ import SwiftUI
 
 import UIKit
 
+//
+//  MeasurementView.swift
+//  SkiTesterApp
+//
+//  WebSocket removed. Uses BLEManager.
+//
+
+import SwiftUI
+import UIKit
+
 struct MeasurementView: View {
     @EnvironmentObject var store: AppStore
 
+    @StateObject private var ble = BLEManager()
     @State private var serverState: String = "Yhdistetään..."
-    @State private var socket: URLSessionWebSocketTask?
     @State private var index: Int = 0
-    
-    let generator = UINotificationFeedbackGenerator()
-    
+
+    private let generator = UINotificationFeedbackGenerator()
+
     var body: some View {
         VStack {
 
-            // Status
             VStack(alignment: .leading, spacing: 4) {
                 Text("Seuraavaksi: \(currentOrder?.name ?? "N/A") kierros: \(currentOrder?.round ?? 0)")
                 Text("Kierros \(currentRoundIndex) / \(totalRounds)")
@@ -31,7 +40,6 @@ struct MeasurementView: View {
             .font(.headline)
             .padding()
 
-            // Table header
             HStack {
                 Text("Pari").bold()
                 Spacer()
@@ -43,7 +51,6 @@ struct MeasurementView: View {
             }
             .padding(.horizontal)
 
-            // Results list
             ScrollView {
                 ForEach(store.state.results.reversed().indices, id: \.self) { i in
                     let r = store.state.results.reversed()[i]
@@ -61,60 +68,36 @@ struct MeasurementView: View {
                 }
             }
 
-            // Footer
             Text("Yhteyden tila: \(serverState)")
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(Color.gray.opacity(0.15))
         }
         .onAppear {
-            connect()
             UIApplication.shared.isIdleTimerDisabled = true
             generator.prepare()
+
+            ble.onTextMessage = { text in
+                handleMessage(text)
+            }
+            ble.start()
         }
         .onDisappear {
-            socket?.cancel()
+            ble.stop()
             UIApplication.shared.isIdleTimerDisabled = false
         }
+        .onReceive(ble.$stateText) { t in
+            serverState = t
+        }
     }
-
-    // MARK: - Helpers
 
     private var currentOrder: OrderItem? {
         guard index < store.state.order.count else { return nil }
         return store.state.order[index]
     }
-    
+
     private var totalRounds: Int { store.state.order.count }
     private var currentRoundIndex: Int { min(index + 1, max(totalRounds, 1)) }
-
-    private func connect() {
-        guard socket == nil else { return }
-
-        let url = URL(string: "ws://192.168.4.1/ws")!
-        let session = URLSession(configuration: .default)
-        socket = session.webSocketTask(with: url)
-        socket?.resume()
-
-        serverState = "Yhdistetty"
-        listen()
-    }
-
-    private func listen() {
-        socket?.receive { result in
-            switch result {
-            case .failure:
-                serverState = "Ei yhteyttä."
-                socket = nil
-
-            case .success(let message):
-                if case let .string(text) = message {
-                    handleMessage(text)
-                }
-                listen()
-            }
-        }
-    }
 
     private func handleMessage(_ text: String) {
         guard
@@ -124,13 +107,9 @@ struct MeasurementView: View {
             let status = StatusCode(rawValue: statusRaw)
         else { return }
 
-        // ACK
+        // ACK via BLE write to RX
         if let id = json["id"] {
-            let ack: [String: Any] = ["id": id]
-            if let ackData = try? JSONSerialization.data(withJSONObject: ack),
-               let ackString = String(data: ackData, encoding: .utf8) {
-                socket?.send(.string(ackString)) { _ in }
-            }
+            ble.sendAck(id: id)
         }
 
         DispatchQueue.main.async {
@@ -149,7 +128,6 @@ struct MeasurementView: View {
                 guard index < store.state.order.count else { return }
 
                 let orderItem = store.state.order[index]
-
                 let mag = json["mag_avg"] as? Double ?? 0
                 let time = json["time"] as? Double ?? 0
 
@@ -183,5 +161,4 @@ struct MeasurementView: View {
             }
         }
     }
-
 }
