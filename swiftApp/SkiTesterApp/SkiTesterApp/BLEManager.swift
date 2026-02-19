@@ -4,8 +4,6 @@
 //
 //  Created by Reetu Inkilä on 21.1.2026.
 //
-
-
 //
 //  BLEManager.swift
 //  SkiTesterApp
@@ -19,6 +17,8 @@
 //  RX      6E400002-B5A3-F393-E0A9-E50E24DCCA9E  (phone -> device write)
 //  TX      6E400003-B5A3-F393-E0A9-E50E24DCCA9E  (device -> phone notify)
 //
+//  Supports background restoration via CBCentralManager restore identifier and willRestoreState.
+//
 
 import Foundation
 import CoreBluetooth
@@ -30,6 +30,8 @@ final class BLEManager: NSObject, ObservableObject {
 
     @Published var stateText: String = "BLE: ei aloitettu"
     @Published var isConnected: Bool = false
+    @Published var discoveredPeripherals: [CBPeripheral] = []
+    @Published var discoveredNames: [String] = []
 
     var onTextMessage: ((String) -> Void)?
 
@@ -52,7 +54,7 @@ final class BLEManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        central = CBCentralManager(delegate: self, queue: .main)
+        central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionRestoreIdentifierKey: "BLEManagerRestoreID"])
     }
 
     // MARK: - Control
@@ -76,9 +78,6 @@ final class BLEManager: NSObject, ObservableObject {
         central.scanForPeripherals(withServices: nil,
                                    options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
     }
-
-
-
 
     func stop() {
         central.stopScan()
@@ -109,6 +108,21 @@ final class BLEManager: NSObject, ObservableObject {
         guard let data = try? JSONSerialization.data(withJSONObject: cmd) else { return }
         let type: CBCharacteristicWriteType = rx.properties.contains(.write) ? .withResponse : .withoutResponse
         p.writeValue(data, for: rx, type: type)
+    }
+
+    func connect(to peripheral: CBPeripheral) {
+        guard central.state == .poweredOn else { return }
+        isConnecting = true
+        self.peripheral = peripheral
+        self.peripheral?.delegate = self
+        stateText = "BLE: yhdistetään \(peripheral.name ?? peripheral.identifier.uuidString)"
+        central.stopScan()
+        central.connect(peripheral, options: nil)
+    }
+
+    func clearDiscoveredPeripherals() {
+        discoveredPeripherals.removeAll()
+        discoveredNames.removeAll()
     }
 }
 
@@ -155,6 +169,12 @@ extension BLEManager: CBCentralManagerDelegate {
         let name = advName ?? peripheral.name ?? ""
 
         guard name.contains("SkiTester") else { return }
+
+        if !discoveredPeripherals.contains(where: { $0.identifier == peripheral.identifier }) {
+            discoveredPeripherals.append(peripheral)
+            discoveredNames.append(name)
+        }
+
         guard !isConnecting && !isConnected else { return }
         isConnecting = true
 
@@ -199,6 +219,26 @@ extension BLEManager: CBCentralManagerDelegate {
         rxChar = nil
         txChar = nil
         start()
+    }
+    
+    func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {
+        print("BLE restoration: willRestoreState")
+        if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
+            print("Restored peripherals: \(peripherals.map { $0.identifier.uuidString })")
+            for peripheral in peripherals {
+                self.peripheral = peripheral
+                peripheral.delegate = self
+                isConnected = (peripheral.state == .connected)
+            }
+        }
+        if let scannedServices = dict[CBCentralManagerRestoredStateScanServicesKey] as? [CBUUID] {
+            print("Restored scan services: \(scannedServices)")
+        }
+        if let connectedPeripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
+            for p in connectedPeripherals {
+                p.delegate = self
+            }
+        }
     }
 }
 
