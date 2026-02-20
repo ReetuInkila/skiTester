@@ -21,30 +21,46 @@ struct SkiTesterAppApp: App {
             MeasurementView()
         case .results:
             ResultsView()
-}
+        }
     }
 
     @StateObject private var store = AppStore()
     @State private var isInfoVisible = false
+    @State private var splashVisible = true
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                rootView
-                    .toolbar {
-                        if store.state.navigation != .start {
-                            ToolbarItem(placement: .navigationBarLeading) {
-                                Button("Alkuun") {
-                                    store.state.navigation = .start
+            ZStack {
+                if splashVisible {
+                    SplashView()
+                        .preferredColorScheme(.light)
+                } else {
+                    NavigationStack {
+                        rootView
+                            .toolbar {
+                                if store.state.navigation != .start {
+                                    ToolbarItem(placement: .navigationBarLeading) {
+                                        Button("Alkuun") {
+                                            store.state.navigation = .start
+                                        }
+                                    }
                                 }
                             }
-                        }
                     }
+                    .environmentObject(store)
+                    .preferredColorScheme(.light)
+                    .sheet(isPresented: $isInfoVisible) {
+                        InfoView(isPresented: $isInfoVisible)
+                    }
+                }
             }
-            .environmentObject(store)
-            .preferredColorScheme(.light)
-            .sheet(isPresented: $isInfoVisible) {
-                InfoView(isPresented: $isInfoVisible)
+            .onAppear {
+                if splashVisible {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        splashVisible = false
+                    }
+                }
+                store.state.navigation = .start
             }
         }
     }

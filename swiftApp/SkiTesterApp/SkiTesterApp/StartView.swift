@@ -17,17 +17,21 @@ struct StartView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-
-            Image("logo")
+            Spacer()
+            Image(systemName: "snowflake")
                 .resizable()
                 .scaledToFit()
-                .frame(maxWidth: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-
+                .frame(width: 120, height: 120)
+                .foregroundColor(.accentColor)
+            Text("SkiTest")
+                .font(.largeTitle).bold()
+                .foregroundColor(.primary)
+            Spacer()
             Button {
                 store.state.navigation = .settings
             } label: {
                 Text("Uusi mittaus")
+                    .foregroundColor(.primary)
             }
 
             if oldResults {
@@ -36,6 +40,7 @@ struct StartView: View {
                     store.state.navigation = .measure
                 } label: {
                     Text("Jatka edellistä")
+                        .foregroundColor(.primary)
                 }
             }
             Spacer()
@@ -47,6 +52,7 @@ struct StartView: View {
                         } label: {
                             Image(systemName: "info.circle")
                                 .font(.system(size: 22))
+                                .foregroundColor(.primary)
                         }
                     }
                 }
