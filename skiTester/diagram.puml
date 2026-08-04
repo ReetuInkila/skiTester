@@ -1,0 +1,62 @@
+@startuml SkiTester
+
+actor Käyttäjä
+participant "Mittalaite (ESP32)" as Device
+participant "Sovellus" as App
+
+== Käynnistys ==
+Käyttäjä -> App : Käynnistä Mittaussovellus
+Käyttäjä -> Device : Käynnistä laite
+
+activate Device
+
+Device -> Device : Alusta IMU
+Device -> Device : Alusta BLE
+Device -> Device : Alusta Summeri
+Device -> Device : Alusta Hall-anturille keskeytyskäsittelijä
+
+Device --> App : BLE mainostus
+App -> Device : Yhdistä
+
+== Mittauksen aloitus ==
+
+Käyttäjä -> Device : Ohita magneetti portti
+
+Device -> Device : Keskeytys (mittaa())
+Device -> Device : measuring = true
+Device -> Device : start_time = millis()
+
+Device --> App : STATUS\n"Measurement started"
+
+loop Mittauksen aikana
+
+    Device -> Device : Lue kiihtyvyys
+    Device -> Device : Laske |a|
+    Device -> Device : Tallenna mag_buf[]
+
+end
+
+== Mittauksen lopetus ==
+
+Käyttäjä -> Device : Ohita magneetti portti uudelleen
+
+Device -> Device : Keskeytys (mittaa())
+Device -> Device : measuring = false
+Device -> Device : end_time = millis()
+
+Device -> Device : Laske keskiarvo
+
+Device --> App : STATUS\nRESULT(avg, duration)
+
+== Virhetilanne ==
+
+alt Timeout 30 s
+
+Device -> Device : Tyhjennä puskuri
+Device --> App : STATUS\n"Measurement timed out"
+
+end
+
+deactivate Device
+
+@enduml
