@@ -6,6 +6,6 @@
 
 bool imuBegin();
 void setReports();
-bool getLinearAcceleration(float &x, float &y, float &z);
+bool getLinearAcceleration(float &x, float &y, float &z, uint8_t &accuracy);
 
 #endif

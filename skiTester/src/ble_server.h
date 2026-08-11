@@ -5,9 +5,13 @@
 void notifyClients(StatusCode status,
                    float mag_avg = 0.0f,
                    float total = 0.0f,
-                   const String& message = "");
+                   const String& message = "",
+                   int imu_cal = 0);
 
 // Call this once from setup()
 void initBLE();
+
+// Returns true (once) if the phone requested a state reset via {"cmd":"clear"} on RX.
+bool consumeClearRequest();
 
 #endif

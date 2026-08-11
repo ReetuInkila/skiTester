@@ -5,9 +5,11 @@
 #include "config.h"
 
 enum StatusCode : uint8_t {
-  STATUS_START  = 1,
-  STATUS_RESULT = 2,
-  STATUS_ERROR  = 3
+  STATUS_IDLE       = 0,
+  STATUS_START      = 1,
+  STATUS_RESULT     = 2,
+  STATUS_ERROR      = 3,
+  STATUS_IMU_STATUS = 4
 };
 // Pinnit summerille ja anturille
 #define BUZZER_PIN 13

@@ -16,12 +16,13 @@ void setReports() {
     }
 }
 
-bool getLinearAcceleration(float &x, float &y, float &z) {
+bool getLinearAcceleration(float &x, float &y, float &z, uint8_t &accuracy) {
     if (bno08x.getSensorEvent(&sensorValue)) {
         if (sensorValue.sensorId == SH2_LINEAR_ACCELERATION) {
             x = sensorValue.un.linearAcceleration.x;
             y = sensorValue.un.linearAcceleration.y;
             z = sensorValue.un.linearAcceleration.z;
+            accuracy = sensorValue.status; // 0=unreliable .. 3=high, per SH2 report accuracy field
             return true;
         }
     }

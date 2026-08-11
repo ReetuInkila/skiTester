@@ -10,6 +10,10 @@ import SwiftData
 
 @main
 struct SkiTesterAppApp: App {
+    @StateObject private var store = AppStore()
+    @StateObject private var ble = BLEManager()
+    @State private var isInfoVisible = false
+
     @ViewBuilder
     private var rootView: some View {
         switch store.state.navigation {
@@ -17,6 +21,8 @@ struct SkiTesterAppApp: App {
             StartView(isInfoVisible: $isInfoVisible)
         case .settings:
             SettingsView()
+        case .bleSetup:
+            BLESetupView()
         case .measure:
             MeasurementView()
         case .results:
@@ -65,4 +71,3 @@ struct SkiTesterAppApp: App {
         }
     }
 }
-

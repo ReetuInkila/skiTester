@@ -30,6 +30,9 @@ inline void mag_clear()
 volatile bool start_event = false;
 volatile bool measuring = false;
 
+// IMU-kalibraatiotilan seuranta (255 = ei vielä lähetetty)
+static uint8_t last_imu_accuracy = 255;
+
 // Funktioiden esikuvat
 void buzz();
 void mittaa();
@@ -63,6 +66,18 @@ void setup()
 
 void loop()
 {
+    // Nollauspyyntö puhelimelta ({"cmd":"clear"} RX:ssä)
+    if (consumeClearRequest())
+    {
+        measuring = false;
+        start_event = false;
+        start_time = 0;
+        end_time = 0;
+        mag_clear();
+        errorMessage = "";
+        notifyClients(STATUS_IDLE);
+    }
+
     // Aloitusportin ilmoitus
     if (start_event)
     {
@@ -89,6 +104,7 @@ void loop()
     {
         notifyClients(STATUS_ERROR, 0, 0, errorMessage);
         errorMessage = "";
+        notifyClients(STATUS_IDLE);
     }
 
     // Tulosten lähetys vain, jos end_time asetettu normaalisti
@@ -101,20 +117,28 @@ void loop()
         float mag_avg = n ? sum / n : 0.0f;
 
         notifyClients(STATUS_RESULT, mag_avg, (end_time - start_time) / 1000.0f);
+        notifyClients(STATUS_IDLE);
 
         mag_clear();
         start_time = 0;
         end_time = 0;
     }
 
-    // Kiihtyvyysarvojen tallennus mittauksen aikana
-    if (measuring && end_time == 0)
+    // Kiihtyvyysarvojen tallennus mittauksen aikana + IMU-kalibraatiotilan seuranta
+    float x, y, z;
+    uint8_t accuracy;
+    if (getLinearAcceleration(x, y, z, accuracy))
     {
-        float x, y, z;
-        if (getLinearAcceleration(x, y, z))
+        if (measuring && end_time == 0)
         {
             float m = sqrtf(x * x + y * y + z * z);
             mag_store(m);
+        }
+
+        if (accuracy != last_imu_accuracy)
+        {
+            last_imu_accuracy = accuracy;
+            notifyClients(STATUS_IMU_STATUS, 0, 0, "", accuracy);
         }
     }
 }

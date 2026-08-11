@@ -30,10 +30,12 @@ final class BLEManager: NSObject, ObservableObject {
 
     @Published var stateText: String = "BLE: ei aloitettu"
     @Published var isConnected: Bool = false
-    @Published var discoveredPeripherals: [CBPeripheral] = []
-    @Published var discoveredNames: [String] = []
+    @Published var devices: [BLEDevice] = []
 
     var onTextMessage: ((String) -> Void)?
+
+    private static let udSelectedDeviceIDKey = "selectedTesterDeviceID"
+    private static let udSelectedDeviceNameKey = "selectedTesterDeviceName"
 
     // MARK: - UUIDs
 
@@ -48,8 +50,8 @@ final class BLEManager: NSObject, ObservableObject {
     private var rxChar: CBCharacteristic?
     private var txChar: CBCharacteristic?
 
-    private var pendingPeripheralNameMatches: [String] = ["SkiTester"]
     private var isConnecting: Bool = false
+    var discoveryOnly: Bool = false
 
 
     override init() {
@@ -59,24 +61,24 @@ final class BLEManager: NSObject, ObservableObject {
 
     // MARK: - Control
 
-    func start() {
+    func start(withServices services: [CBUUID]? = nil) {
         guard central.state == .poweredOn else {
             stateText = "BLE: Bluetooth ei päällä"
             return
         }
 
-        // reset
-        isConnecting = false
-        peripheral = nil
-        rxChar = nil
-        txChar = nil
-        isConnected = false
+        log("start() instance=\(ObjectIdentifier(self)) discoveryOnly=\(discoveryOnly)")
 
-        print("SCAN START")
+        isConnecting = false
+        resetConnectionState()
+
         central.stopScan()
         stateText = "BLE: skannataan"
         central.scanForPeripherals(withServices: nil,
-                                   options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
+                                   options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
+
+        // Include already-connected peripherals so they appear even if not advertising
+        includeAlreadyConnectedPeripherals()
     }
 
     func stop() {
@@ -84,30 +86,16 @@ final class BLEManager: NSObject, ObservableObject {
         if let p = peripheral {
             central.cancelPeripheralConnection(p)
         }
-        peripheral = nil
-        rxChar = nil
-        txChar = nil
-        isConnected = false
+        resetConnectionState()
         stateText = "BLE: pysäytetty"
     }
 
     func sendAck(id: Any) {
-        guard let p = peripheral, let rx = rxChar else { return }
-
-        let ack: [String: Any] = ["id": id]
-        guard let data = try? JSONSerialization.data(withJSONObject: ack) else { return }
-
-        // Prefer .withResponse if supported; else fallback.
-        let type: CBCharacteristicWriteType = rx.properties.contains(.write) ? .withResponse : .withoutResponse
-        p.writeValue(data, for: rx, type: type)
+        write(["id": id])
     }
 
     func sendClear() {
-        guard let p = peripheral, let rx = rxChar else { return }
-        let cmd: [String: Any] = ["cmd": "clear"]
-        guard let data = try? JSONSerialization.data(withJSONObject: cmd) else { return }
-        let type: CBCharacteristicWriteType = rx.properties.contains(.write) ? .withResponse : .withoutResponse
-        p.writeValue(data, for: rx, type: type)
+        write(["cmd": "clear"])
     }
 
     func connect(to peripheral: CBPeripheral) {
@@ -120,16 +108,77 @@ final class BLEManager: NSObject, ObservableObject {
         central.connect(peripheral, options: nil)
     }
 
+    func selectDevice(_ device: BLEDevice) {
+        log("selectDevice saving ID=\(device.id.uuidString), name=\(device.name)")
+        UserDefaults.standard.set(device.id.uuidString, forKey: Self.udSelectedDeviceIDKey)
+        UserDefaults.standard.set(device.name, forKey: Self.udSelectedDeviceNameKey)
+        connect(to: device.peripheral)
+    }
+
     func clearDiscoveredPeripherals() {
-        discoveredPeripherals.removeAll()
-        discoveredNames.removeAll()
+        devices.removeAll()
+    }
+
+    // MARK: - Private helpers
+
+    /// Case-insensitive match against the expected peripheral name ("SkiTester...").
+    private func matchesTargetName(_ name: String?) -> Bool {
+        name?.localizedCaseInsensitiveContains("SkiTester") ?? false
+    }
+
+    /// Insert or update a device in `devices`, preserving its RSSI when `rssi` is nil.
+    private func upsertDevice(id: UUID, name: String, rssi: Int?, peripheral: CBPeripheral) {
+        if let idx = devices.firstIndex(where: { $0.id == id }) {
+            devices[idx] = BLEDevice(id: id, name: name, rssi: rssi ?? devices[idx].rssi, peripheral: peripheral)
+        } else {
+            devices.append(BLEDevice(id: id, name: name, rssi: rssi ?? 0, peripheral: peripheral))
+        }
+    }
+
+    private func includeAlreadyConnectedPeripherals() {
+        let connected = central.retrieveConnectedPeripherals(withServices: [serviceUUID])
+        let savedIDString = UserDefaults.standard.string(forKey: Self.udSelectedDeviceIDKey)
+        let savedName = UserDefaults.standard.string(forKey: Self.udSelectedDeviceNameKey)
+
+        for p in connected {
+            let hasSavedMatch = (savedIDString != nil) && (UUID(uuidString: savedIDString!) == p.identifier)
+            let nameCandidate = p.name ?? (hasSavedMatch ? savedName : nil)
+            log("retrieveConnectedPeripherals found id=\(p.identifier.uuidString), name=\(nameCandidate ?? "<nil>") hasSavedMatch=\(hasSavedMatch)")
+
+            // Apply same name filter as didDiscover, but always include if it is the saved selection
+            guard matchesTargetName(nameCandidate) || hasSavedMatch else { continue }
+            let finalName = nameCandidate ?? "SkiTester"
+            upsertDevice(id: p.identifier, name: finalName, rssi: nil, peripheral: p)
+        }
+    }
+
+    private func resetConnectionState() {
+        peripheral = nil
+        rxChar = nil
+        txChar = nil
+        isConnected = false
+    }
+
+    private func write(_ payload: [String: Any]) {
+        guard let p = peripheral, let rx = rxChar else { return }
+        guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return }
+
+        // Prefer .withResponse if supported; else fallback.
+        let type: CBCharacteristicWriteType = rx.properties.contains(.write) ? .withResponse : .withoutResponse
+        p.writeValue(data, for: rx, type: type)
+    }
+
+    private func log(_ message: String) {
+        #if DEBUG
+        print("[BLE] \(message)")
+        #endif
     }
 }
 
 extension BLEManager: CBCentralManagerDelegate {
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        print("CB state", central.state.rawValue)
+        log("central state update instance=\(ObjectIdentifier(self)) state=\(central.state.rawValue)")
 
         switch central.state {
         case .poweredOn:
@@ -165,31 +214,23 @@ extension BLEManager: CBCentralManagerDelegate {
                         rssi RSSI: NSNumber) {
 
         let advName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
-        print("DISCOVER", advName, peripheral.identifier.uuidString, RSSI)
-        let name = advName ?? peripheral.name ?? ""
+        let baseName = advName ?? peripheral.name
+        // Filter: only include devices whose name contains "SkiTester" (case-insensitive)
+        guard let name = baseName, matchesTargetName(name) else { return }
 
-        guard name.contains("SkiTester") else { return }
+        upsertDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue, peripheral: peripheral)
 
-        if !discoveredPeripherals.contains(where: { $0.identifier == peripheral.identifier }) {
-            discoveredPeripherals.append(peripheral)
-            discoveredNames.append(name)
-        }
+        // In discovery-only mode (BLE setup), do not auto-connect or stop scanning
+        guard !discoveryOnly else { return }
 
+        // Legacy behavior: auto-connect to known devices (kept for MeasurementView flow)
         guard !isConnecting && !isConnected else { return }
-        isConnecting = true
-
-        self.peripheral = peripheral
-        self.peripheral?.delegate = self
-
-        stateText = "BLE: yhdistetään \(name)"
-        central.stopScan()
-        central.connect(peripheral, options: nil)
+        connect(to: peripheral)
     }
 
 
-
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        print("CONNECTED", peripheral.identifier.uuidString)
+        log("connected \(peripheral.identifier.uuidString)")
         isConnected = true
         stateText = "BLE: yhdistetty"
         peripheral.discoverServices([serviceUUID])
@@ -198,33 +239,27 @@ extension BLEManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager,
                         didFailToConnect peripheral: CBPeripheral,
                         error: Error?) {
-        print("FAIL CONNECT", error?.localizedDescription ?? "nil")
-        isConnected = false
+        log("fail connect \(error?.localizedDescription ?? "nil")")
         isConnecting = false
         stateText = "BLE: yhteys epäonnistui"
-        self.peripheral = nil
-        rxChar = nil
-        txChar = nil
+        resetConnectionState()
         start()
     }
-    
+
     func centralManager(_ central: CBCentralManager,
                         didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
-        print("DISCONNECTED", error?.localizedDescription ?? "nil")
-        isConnected = false
+        log("disconnected \(error?.localizedDescription ?? "nil")")
         isConnecting = false
         stateText = "BLE: irti"
-        self.peripheral = nil
-        rxChar = nil
-        txChar = nil
+        resetConnectionState()
         start()
     }
-    
+
     func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {
-        print("BLE restoration: willRestoreState")
+        log("willRestoreState")
         if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
-            print("Restored peripherals: \(peripherals.map { $0.identifier.uuidString })")
+            log("restored peripherals: \(peripherals.map { $0.identifier.uuidString })")
             for peripheral in peripherals {
                 self.peripheral = peripheral
                 peripheral.delegate = self
@@ -232,12 +267,7 @@ extension BLEManager: CBCentralManagerDelegate {
             }
         }
         if let scannedServices = dict[CBCentralManagerRestoredStateScanServicesKey] as? [CBUUID] {
-            print("Restored scan services: \(scannedServices)")
-        }
-        if let connectedPeripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
-            for p in connectedPeripherals {
-                p.delegate = self
-            }
+            log("restored scan services: \(scannedServices)")
         }
     }
 }
@@ -245,7 +275,7 @@ extension BLEManager: CBCentralManagerDelegate {
 extension BLEManager: CBPeripheralDelegate {
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        print("SERVICES", peripheral.services?.map{$0.uuid.uuidString} ?? [])
+        log("services \(peripheral.services?.map{$0.uuid.uuidString} ?? [])")
         guard error == nil else { return }
         guard let services = peripheral.services else { return }
 
@@ -258,7 +288,7 @@ extension BLEManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral,
                     didDiscoverCharacteristicsFor service: CBService,
                     error: Error?) {
-        print("CHARS", service.characteristics?.map{$0.uuid.uuidString} ?? [])
+        log("characteristics \(service.characteristics?.map{$0.uuid.uuidString} ?? [])")
         guard error == nil else { return }
         guard let chars = service.characteristics else { return }
 
@@ -277,10 +307,10 @@ extension BLEManager: CBPeripheralDelegate {
                     didUpdateNotificationStateFor characteristic: CBCharacteristic,
                     error: Error?) {
         if let error = error {
-            print("NOTIFY STATE ERROR", error.localizedDescription)
+            log("notify state error \(error.localizedDescription)")
             return
         }
-        print("NOTIFY STATE", characteristic.uuid.uuidString, "isNotifying:", characteristic.isNotifying)
+        log("notify state \(characteristic.uuid.uuidString) isNotifying=\(characteristic.isNotifying)")
 
         if characteristic.uuid == txUUID {
             stateText = characteristic.isNotifying ? "BLE: kuunnellaan" : "BLE: notify pois"
@@ -299,3 +329,13 @@ extension BLEManager: CBPeripheralDelegate {
     }
 }
 
+struct BLEDevice: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    var rssi: Int
+    let peripheral: CBPeripheral
+
+    static func == (lhs: BLEDevice, rhs: BLEDevice) -> Bool {
+        lhs.id == rhs.id
+    }
+}
