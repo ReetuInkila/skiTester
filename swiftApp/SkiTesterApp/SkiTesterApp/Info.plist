@@ -4,6 +4,10 @@
 <dict>
 	<key></key>
 	<string></string>
+	<key>NSBluetoothServices</key>
+	<array>
+		<string></string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>
