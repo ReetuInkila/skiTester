@@ -30,8 +30,6 @@ struct SkiTesterAppApp: App {
         }
     }
 
-    @StateObject private var store = AppStore()
-    @State private var isInfoVisible = false
     @State private var splashVisible = true
 
     var body: some Scene {
@@ -54,6 +52,7 @@ struct SkiTesterAppApp: App {
                             }
                     }
                     .environmentObject(store)
+                    .environmentObject(ble)
                     .preferredColorScheme(.light)
                     .sheet(isPresented: $isInfoVisible) {
                         InfoView(isPresented: $isInfoVisible)

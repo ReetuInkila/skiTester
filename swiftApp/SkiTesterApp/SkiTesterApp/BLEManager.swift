@@ -82,9 +82,11 @@ final class BLEManager: NSObject, ObservableObject {
     }
 
     func stop() {
-        central.stopScan()
-        if let p = peripheral {
-            central.cancelPeripheralConnection(p)
+        if central.state == .poweredOn {
+            central.stopScan()
+            if let p = peripheral {
+                central.cancelPeripheralConnection(p)
+            }
         }
         resetConnectionState()
         stateText = "BLE: pysäytetty"
