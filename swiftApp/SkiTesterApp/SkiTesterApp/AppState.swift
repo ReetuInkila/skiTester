@@ -10,6 +10,7 @@ import Foundation
 enum Route: Codable {
     case start
     case settings
+    case bleSetup
     case measure
     case results
 }
@@ -50,3 +51,5 @@ struct SettingsData: Codable {
     let snowQuality: String
     let baseHardness: String
 }
+
+

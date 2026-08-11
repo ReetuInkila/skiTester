@@ -10,6 +10,10 @@ import SwiftData
 
 @main
 struct SkiTesterAppApp: App {
+    @StateObject private var store = AppStore()
+    @StateObject private var ble = BLEManager()
+    @State private var isInfoVisible = false
+
     @ViewBuilder
     private var rootView: some View {
         switch store.state.navigation {
@@ -17,15 +21,14 @@ struct SkiTesterAppApp: App {
             StartView(isInfoVisible: $isInfoVisible)
         case .settings:
             SettingsView()
+        case .bleSetup:
+            BLESetupView()
         case .measure:
             MeasurementView()
         case .results:
             ResultsView()
-}
+        }
     }
-
-    @StateObject private var store = AppStore()
-    @State private var isInfoVisible = false
 
     var body: some Scene {
         WindowGroup {
@@ -42,6 +45,7 @@ struct SkiTesterAppApp: App {
                     }
             }
             .environmentObject(store)
+            .environmentObject(ble)
             .preferredColorScheme(.light)
             .sheet(isPresented: $isInfoVisible) {
                 InfoView(isPresented: $isInfoVisible)
@@ -49,4 +53,3 @@ struct SkiTesterAppApp: App {
         }
     }
 }
-
