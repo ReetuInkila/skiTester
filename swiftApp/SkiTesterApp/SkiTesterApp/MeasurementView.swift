@@ -26,82 +26,123 @@ struct MeasurementView: View {
     @EnvironmentObject private var ble: BLEManager
     @State private var serverState: String = "Yhdistetään..."
     @State private var index: Int = 0
+    @State private var showRetry: Bool = false
+    @State private var disconnectedSince: Date? = nil
 
     private let generator = UINotificationFeedbackGenerator()
-    private let savedDeviceID: UUID? = UserDefaults.standard.string(forKey: "selectedTesterDeviceID").flatMap(UUID.init)
 
     var body: some View {
-        VStack {
+        ZStack {
+            VStack {
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Seuraavaksi: \(currentOrder?.name ?? "N/A") kierros: \(currentOrder?.round ?? 0)")
-                Text("Kierros \(currentRoundIndex) / \(totalRounds)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            .font(.headline)
-            .padding()
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Seuraavaksi: \(currentOrder?.name ?? "N/A") kierros: \(currentOrder?.round ?? 0)")
+                    Text("Kierros \(currentRoundIndex) / \(totalRounds)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .font(.headline)
+                .padding()
 
-            HStack {
-                Text("Pari").bold()
-                Spacer()
-                Text("Kierros").bold()
-                Spacer()
-                Text("Kiihtyvyys").bold()
-                Spacer()
-                Text("Aika").bold()
-            }
-            .padding(.horizontal)
+                HStack {
+                    Text("Pari").bold()
+                    Spacer()
+                    Text("Kierros").bold()
+                    Spacer()
+                    Text("Kiihtyvyys").bold()
+                    Spacer()
+                    Text("Aika").bold()
+                }
+                .padding(.horizontal)
 
-            ScrollView {
-                ForEach(store.state.results.reversed().indices, id: \.self) { i in
-                    let r = store.state.results.reversed()[i]
-                    HStack {
-                        Text(r.name)
-                        Spacer()
-                        Text("\(r.round)")
-                        Spacer()
-                        Text(r.mag_avg.formatted(.number.precision(.fractionLength(3))))
-                        Spacer()
-                        Text(r.time.formatted(.number.precision(.fractionLength(3))))
+                ScrollView {
+                    ForEach(store.state.results.reversed().indices, id: \.self) { i in
+                        let r = store.state.results.reversed()[i]
+                        HStack {
+                            Text(r.name)
+                            Spacer()
+                            Text("\(r.round)")
+                            Spacer()
+                            Text(r.mag_avg.formatted(.number.precision(.fractionLength(3))))
+                            Spacer()
+                            Text(r.time.formatted(.number.precision(.fractionLength(3))))
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 4)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 4)
                 }
             }
-
-            Text("Yhteyden tila: \(serverState)")
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.gray.opacity(0.15))
+        }
+        .toolbar {
+            ToolbarItem(placement: .bottomBar) {
+                HStack(spacing: 12) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(ble.isConnected ? Color.green : Color.red)
+                            .frame(width: 8, height: 8)
+                        Text(serverState)
+                            .font(.footnote)
+                            .foregroundColor(.primary)
+                    }
+                    Spacer()
+                    if showRetry {
+                        Button(action: {
+                            ble.start()
+                            showRetry = false
+                            disconnectedSince = Date()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Yritä uudelleen")
+                            }
+                            .font(.footnote.weight(.semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.accentColor.opacity(0.15))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
         .onAppear {
-            print("[BLE DEBUG] MeasurementView onAppear savedDeviceID=\(String(describing: savedDeviceID))")
             UIApplication.shared.isIdleTimerDisabled = true
             generator.prepare()
 
             ble.onTextMessage = { text in
                 handleMessage(text)
             }
-            ble.start()
-            
-            // Attempt to auto-connect to the previously selected device when discovered
-            if let targetID = savedDeviceID {
-                // Observe devices and connect when the target appears
-                _ = ble.$devices.sink { list in
-                    if let match = list.first(where: { $0.id == targetID }) {
-                        print("[BLE DEBUG] MeasurementView found saved device in scan id=\(match.id.uuidString), attempting connect")
-                        ble.connect(to: match.peripheral)
-                    }
-                }
-            }
+            // Do not start BLE here; it should be started at app launch so connection persists across views.
+
+            // Track disconnection duration and show retry after timeout
+            if !ble.isConnected { disconnectedSince = Date() }
         }
         .onDisappear {
-            ble.stop()
+            // Do not stop BLE here; keep connection persistent across the app lifecycle.
             UIApplication.shared.isIdleTimerDisabled = false
         }
         .onReceive(ble.$stateText) { t in
             serverState = t
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            if ble.isConnected {
+                showRetry = false
+                disconnectedSince = nil
+            } else {
+                if disconnectedSince == nil { disconnectedSince = Date() }
+                if let since = disconnectedSince, Date().timeIntervalSince(since) > 5 { // 5s timeout
+                    showRetry = true
+                }
+            }
+        }
+        .onReceive(ble.$isConnected) { connected in
+            if connected {
+                showRetry = false
+                disconnectedSince = nil
+            } else {
+                disconnectedSince = Date()
+            }
         }
     }
 

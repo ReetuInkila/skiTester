@@ -13,6 +13,7 @@ struct SkiTesterAppApp: App {
     @StateObject private var store = AppStore()
     @StateObject private var ble = BLEManager()
     @State private var isInfoVisible = false
+    @State private var splashVisible = true
 
     @ViewBuilder
     private var rootView: some View {
@@ -21,16 +22,14 @@ struct SkiTesterAppApp: App {
             StartView(isInfoVisible: $isInfoVisible)
         case .settings:
             SettingsView()
-        case .bleSetup:
-            BLESetupView()
         case .measure:
             MeasurementView()
         case .results:
             ResultsView()
+        default:
+            StartView(isInfoVisible: $isInfoVisible)
         }
     }
-
-    @State private var splashVisible = true
 
     var body: some Scene {
         WindowGroup {

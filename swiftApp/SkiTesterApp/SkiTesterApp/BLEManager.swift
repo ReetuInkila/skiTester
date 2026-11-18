@@ -18,6 +18,7 @@
 //  TX      6E400003-B5A3-F393-E0A9-E50E24DCCA9E  (device -> phone notify)
 //
 //  Supports background restoration via CBCentralManager restore identifier and willRestoreState.
+//  Simplified: Always connects to device named "SkiTester-1" and filters by the Nordic UART service.
 //
 
 import Foundation
@@ -30,18 +31,15 @@ final class BLEManager: NSObject, ObservableObject {
 
     @Published var stateText: String = "BLE: ei aloitettu"
     @Published var isConnected: Bool = false
-    @Published var devices: [BLEDevice] = []
 
     var onTextMessage: ((String) -> Void)?
-
-    private static let udSelectedDeviceIDKey = "selectedTesterDeviceID"
-    private static let udSelectedDeviceNameKey = "selectedTesterDeviceName"
 
     // MARK: - UUIDs
 
     private let serviceUUID = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
     private let rxUUID      = CBUUID(string: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
     private let txUUID      = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
+    private let targetDeviceName = "SkiTester-1"
 
     // MARK: - CoreBluetooth
 
@@ -51,8 +49,6 @@ final class BLEManager: NSObject, ObservableObject {
     private var txChar: CBCharacteristic?
 
     private var isConnecting: Bool = false
-    var discoveryOnly: Bool = false
-
 
     override init() {
         super.init()
@@ -67,18 +63,15 @@ final class BLEManager: NSObject, ObservableObject {
             return
         }
 
-        log("start() instance=\(ObjectIdentifier(self)) discoveryOnly=\(discoveryOnly)")
+        log("start() instance=\(ObjectIdentifier(self))")
 
         isConnecting = false
         resetConnectionState()
 
         central.stopScan()
         stateText = "BLE: skannataan"
-        central.scanForPeripherals(withServices: nil,
+        central.scanForPeripherals(withServices: [serviceUUID],
                                    options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
-
-        // Include already-connected peripherals so they appear even if not advertising
-        includeAlreadyConnectedPeripherals()
     }
 
     func stop() {
@@ -110,48 +103,12 @@ final class BLEManager: NSObject, ObservableObject {
         central.connect(peripheral, options: nil)
     }
 
-    func selectDevice(_ device: BLEDevice) {
-        log("selectDevice saving ID=\(device.id.uuidString), name=\(device.name)")
-        UserDefaults.standard.set(device.id.uuidString, forKey: Self.udSelectedDeviceIDKey)
-        UserDefaults.standard.set(device.name, forKey: Self.udSelectedDeviceNameKey)
-        connect(to: device.peripheral)
-    }
-
-    func clearDiscoveredPeripherals() {
-        devices.removeAll()
-    }
-
     // MARK: - Private helpers
 
-    /// Case-insensitive match against the expected peripheral name ("SkiTester...").
+    /// Exact case-insensitive match against the fixed device name ("SkiTester-1").
     private func matchesTargetName(_ name: String?) -> Bool {
-        name?.localizedCaseInsensitiveContains("SkiTester") ?? false
-    }
-
-    /// Insert or update a device in `devices`, preserving its RSSI when `rssi` is nil.
-    private func upsertDevice(id: UUID, name: String, rssi: Int?, peripheral: CBPeripheral) {
-        if let idx = devices.firstIndex(where: { $0.id == id }) {
-            devices[idx] = BLEDevice(id: id, name: name, rssi: rssi ?? devices[idx].rssi, peripheral: peripheral)
-        } else {
-            devices.append(BLEDevice(id: id, name: name, rssi: rssi ?? 0, peripheral: peripheral))
-        }
-    }
-
-    private func includeAlreadyConnectedPeripherals() {
-        let connected = central.retrieveConnectedPeripherals(withServices: [serviceUUID])
-        let savedIDString = UserDefaults.standard.string(forKey: Self.udSelectedDeviceIDKey)
-        let savedName = UserDefaults.standard.string(forKey: Self.udSelectedDeviceNameKey)
-
-        for p in connected {
-            let hasSavedMatch = (savedIDString != nil) && (UUID(uuidString: savedIDString!) == p.identifier)
-            let nameCandidate = p.name ?? (hasSavedMatch ? savedName : nil)
-            log("retrieveConnectedPeripherals found id=\(p.identifier.uuidString), name=\(nameCandidate ?? "<nil>") hasSavedMatch=\(hasSavedMatch)")
-
-            // Apply same name filter as didDiscover, but always include if it is the saved selection
-            guard matchesTargetName(nameCandidate) || hasSavedMatch else { continue }
-            let finalName = nameCandidate ?? "SkiTester"
-            upsertDevice(id: p.identifier, name: finalName, rssi: nil, peripheral: p)
-        }
+        guard let name = name else { return false }
+        return name.caseInsensitiveCompare(targetDeviceName) == .orderedSame
     }
 
     private func resetConnectionState() {
@@ -217,15 +174,8 @@ extension BLEManager: CBCentralManagerDelegate {
 
         let advName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
         let baseName = advName ?? peripheral.name
-        // Filter: only include devices whose name contains "SkiTester" (case-insensitive)
-        guard let name = baseName, matchesTargetName(name) else { return }
+        guard matchesTargetName(baseName) else { return }
 
-        upsertDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue, peripheral: peripheral)
-
-        // In discovery-only mode (BLE setup), do not auto-connect or stop scanning
-        guard !discoveryOnly else { return }
-
-        // Legacy behavior: auto-connect to known devices (kept for MeasurementView flow)
         guard !isConnecting && !isConnected else { return }
         connect(to: peripheral)
     }
@@ -328,16 +278,5 @@ extension BLEManager: CBPeripheralDelegate {
         guard let text = String(data: data, encoding: .utf8) else { return }
 
         onTextMessage?(text)
-    }
-}
-
-struct BLEDevice: Identifiable, Equatable {
-    let id: UUID
-    let name: String
-    var rssi: Int
-    let peripheral: CBPeripheral
-
-    static func == (lhs: BLEDevice, rhs: BLEDevice) -> Bool {
-        lhs.id == rhs.id
     }
 }
