@@ -28,7 +28,6 @@ struct MeasurementView: View {
     @State private var index: Int = 0
 
     private let generator = UINotificationFeedbackGenerator()
-    private let savedDeviceID: UUID? = UserDefaults.standard.string(forKey: "selectedTesterDeviceID").flatMap(UUID.init)
 
     var body: some View {
         VStack {
@@ -76,7 +75,6 @@ struct MeasurementView: View {
                 .background(Color.gray.opacity(0.15))
         }
         .onAppear {
-            print("[BLE DEBUG] MeasurementView onAppear savedDeviceID=\(String(describing: savedDeviceID))")
             UIApplication.shared.isIdleTimerDisabled = true
             generator.prepare()
 
@@ -84,17 +82,6 @@ struct MeasurementView: View {
                 handleMessage(text)
             }
             ble.start()
-            
-            // Attempt to auto-connect to the previously selected device when discovered
-            if let targetID = savedDeviceID {
-                // Observe devices and connect when the target appears
-                _ = ble.$devices.sink { list in
-                    if let match = list.first(where: { $0.id == targetID }) {
-                        print("[BLE DEBUG] MeasurementView found saved device in scan id=\(match.id.uuidString), attempting connect")
-                        ble.connect(to: match.peripheral)
-                    }
-                }
-            }
         }
         .onDisappear {
             ble.stop()

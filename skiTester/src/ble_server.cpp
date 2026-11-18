@@ -111,7 +111,7 @@ bool consumeClearRequest() {
 // Call this once from setup()
 void initBLE() {
   Serial.println("Starting BLE...");
-  NimBLEDevice::init("SkiTester");
+  NimBLEDevice::init(BLE_DEVICE_NAME);
   NimBLEDevice::setPower(ESP_PWR_LVL_P9); // max TX power
   NimBLEDevice::setSecurityAuth(false, false, false);
 
@@ -136,7 +136,7 @@ void initBLE() {
   NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
 
   NimBLEAdvertisementData ad;
-  ad.setName("SkiTester");
+  ad.setName(BLE_DEVICE_NAME);
   ad.addServiceUUID(SERVICE_UUID);
   adv->setAdvertisementData(ad);
 

@@ -49,23 +49,13 @@ struct StartView: View {
             Spacer()
         }
         .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
-                            isInfoVisible = true
-                        } label: {
-                            Image(systemName: "info.circle")
-                                .font(.system(size: 22))
-                                .foregroundColor(.primary)
-                        }
-                    }
-                }
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     isInfoVisible = true
                 } label: {
                     Image(systemName: "info.circle")
                         .font(.system(size: 22))
+                        .foregroundColor(.primary)
                 }
             }
         }
