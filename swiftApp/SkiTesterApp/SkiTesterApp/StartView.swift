@@ -51,6 +51,15 @@ struct StartView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    store.state.navigation = .bleSetup
+                } label: {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.system(size: 22))
+                        .foregroundColor(.primary)
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
                     isInfoVisible = true
                 } label: {
                     Image(systemName: "info.circle")
